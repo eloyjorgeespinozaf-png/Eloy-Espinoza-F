@@ -1,0 +1,6 @@
+{
+  "name": "Campus Virtual de Inteligencia Estratégica",
+  "description": "Centro de Operaciones y plataforma de acceso de alta seguridad para el Campus Virtual de Inteligencia Estratégica de la Escuela de Comando y Estado Mayor del Ejército.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

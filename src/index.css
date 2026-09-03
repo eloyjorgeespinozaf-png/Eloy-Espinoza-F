@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Oswald", "Teko", sans-serif;
+  --font-heading: "Oswald", sans-serif;
+  --font-teko: "Teko", sans-serif;
+  --font-sans: "Montserrat", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #021811;
+  color: #d1ded9;
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-teko {
+  font-family: var(--font-teko);
+}
+
+/* Deep Emerald Tactical Relief Background */
+.tactical-emerald-bg {
+  background-color: #031e15;
+  background-image: 
+    /* Directional studio lighting for dimensional depth */
+    radial-gradient(ellipse at 50% 20%, rgba(16, 110, 78, 0.45) 0%, rgba(3, 30, 21, 0.85) 60%, rgba(1, 15, 10, 0.98) 100%),
+    /* Micro-tactical grid pattern */
+    linear-gradient(rgba(52, 211, 153, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 211, 153, 0.045) 1px, transparent 1px),
+    /* Fine tactical relief weave */
+    repeating-linear-gradient(45deg, rgba(16, 185, 129, 0.02) 0px, rgba(16, 185, 129, 0.02) 2px, transparent 2px, transparent 6px),
+    repeating-linear-gradient(-45deg, rgba(16, 185, 129, 0.02) 0px, rgba(16, 185, 129, 0.02) 2px, transparent 2px, transparent 6px);
+  background-size: 100% 100%, 14px 14px, 14px 14px, 12px 12px, 12px 12px;
+}
+
+.security-vignette {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(1, 12, 8, 0.85) 85%, rgba(0, 8, 5, 0.96) 100%);
+}
+
