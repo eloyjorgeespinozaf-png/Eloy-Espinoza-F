@@ -23,6 +23,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { DoctrinaMilitarDetalle } from './DoctrinaMilitarDetalle';
+import { CicloInteligenciaDetalle } from './CicloInteligenciaDetalle';
 
 interface FaseTeoricaDetalleProps {
   onClose?: () => void;
@@ -112,7 +113,7 @@ export function FaseTeoricaDetalle({ onClose, onEnterModule }: FaseTeoricaDetall
       badge: "NÚCLEO 3 // CICLO ESTRATÉGICO",
       icon: "🔄",
       xp: 40,
-      shortDesc: "Bucle cibernético de 7 fases: dirección, recolección Multi-INT, evaluación, colación, análisis, inferencia y difusión oportuna.",
+      shortDesc: "Simulador Interactivo CVIE (ECEME Bolivia): Carta Circular Wheel HUD, Triage RPI/ORI, Matriz Gibson y Estimación Sherman Kent.",
       content: `
         <h3 class="text-base font-bold text-[#86efac] mb-2 uppercase font-heading">El Ciclo Cibernético de Inteligencia en 7 Fases</h3>
         <p class="mb-3 text-xs sm:text-sm text-[#cbd5e1] leading-relaxed">El ciclo contemporáneo sustituye la secuencialidad estática lineal por un modelo dinámico con bucles de retroalimentación continua para acelerar la toma de decisiones:</p>
@@ -408,6 +409,9 @@ export function FaseTeoricaDetalle({ onClose, onEnterModule }: FaseTeoricaDetall
   return (
     <div 
       id="fase-teorica-modal-overlay" 
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6 bg-[#010906]/90 backdrop-blur-md overflow-y-auto animate-fadeIn"
     >
       {/* Contenedor Principal con Glassmorphism Táctico y Alto Contraste */}
@@ -1011,10 +1015,31 @@ export function FaseTeoricaDetalle({ onClose, onEnterModule }: FaseTeoricaDetall
         )}
 
         {/* ========================================================================= */}
-        {/* MODAL DE DETALLE DE OTROS NÚCLEOS TEMÁTICOS (2, 3, 4)                     */}
+        {/* MODAL ESPECIALIZADO: NÚCLEO 3 CICLO DE INTELIGENCIA ESTRATÉGICA (CVIE)    */}
         {/* ========================================================================= */}
-        {activeTopicModalId !== null && activeTopicModalId !== 1 && activeModalTopic && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-5 bg-[#020b07]/90 backdrop-blur-md animate-fadeIn">
+        {activeTopicModalId === 3 && (
+          <CicloInteligenciaDetalle
+            initialXp={topics[3]?.xp || 40}
+            onClose={() => setActiveTopicModalId(null)}
+            onUpdateXp={(newXp) => {
+              setTopics(prev => ({
+                ...prev,
+                3: { ...prev[3], xp: newXp }
+              }));
+            }}
+          />
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL DE DETALLE DE OTROS NÚCLEOS TEMÁTICOS (2, 4)                        */}
+        {/* ========================================================================= */}
+        {activeTopicModalId !== null && activeTopicModalId !== 1 && activeTopicModalId !== 3 && activeModalTopic && (
+          <div 
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveTopicModalId(null);
+            }}
+            className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-5 bg-[#020b07]/90 backdrop-blur-md animate-fadeIn"
+          >
             <div className="relative w-full max-w-4xl bg-[#04140e] border border-[#10b981] rounded-xs shadow-[0_0_40px_rgba(16,185,129,0.3),0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[88vh]">
               
               {/* Header Modal */}

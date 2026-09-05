@@ -1,0 +1,465 @@
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+
+// Tactical Military SVG Design matching the uploaded emblem:
+// ESCUELA DE COMANDO Y ESTADO MAYOR
+// Glowing Cyan Brain & Open Cyber Book
+// Robotic Cyborg Hand gripping Glowing Cyber Dagger
+// Metallic Laurel Wreath
+// 3D Metallic "INTELIGENCIA ESTRATÉGICA" + Gold "BOLIVIA"
+// Metallic Banner Ribbon: "SER ANTES QUE PARECER"
+// Carbon Fiber & Tactical Armored Chassis
+
+function createEmblemSvg({ width = 1024, height = 1024, isSquareIcon = false }) {
+  // If isSquareIcon is true, we optimize the viewBox and framing for app icon presentation (PC desktop icon and mobile icon)
+  const vbW = 1024;
+  const vbH = 1024;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH}" width="${width}" height="${height}">
+  <defs>
+    <!-- Background Gradients -->
+    <radialGradient id="chassisGrad" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#18201d"/>
+      <stop offset="55%" stop-color="#0d1411"/>
+      <stop offset="100%" stop-color="#040806"/>
+    </radialGradient>
+
+    <linearGradient id="armorBevel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3d5248"/>
+      <stop offset="30%" stop-color="#1f2c25"/>
+      <stop offset="70%" stop-color="#0f1713"/>
+      <stop offset="100%" stop-color="#050807"/>
+    </linearGradient>
+
+    <!-- Metallic Silver Gradients for Typography & Wreath -->
+    <linearGradient id="silver3D" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#e2e8f0"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="75%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+
+    <linearGradient id="silverBevel" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="40%" stop-color="#94a3b8"/>
+      <stop offset="70%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <!-- Golden Bronze Gradient for BOLIVIA -->
+    <linearGradient id="gold3D" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="25%" stop-color="#facc15"/>
+      <stop offset="55%" stop-color="#ca8a04"/>
+      <stop offset="80%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#854d0e"/>
+    </linearGradient>
+
+    <!-- Glowing Cyan Brain & Blade Core -->
+    <radialGradient id="cyanGlowRadial" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#38bdf8"/>
+      <stop offset="70%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="rgba(0,229,255,0)"/>
+    </radialGradient>
+
+    <linearGradient id="bladeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="20%" stop-color="#67e8f9"/>
+      <stop offset="50%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="cyborgMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="35%" stop-color="#334155"/>
+      <stop offset="70%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <!-- Carbon Fiber Pattern -->
+    <pattern id="carbonPattern" width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="12" height="12" fill="#0c1310"/>
+      <rect width="6" height="6" fill="#141d19"/>
+      <rect x="6" y="6" width="6" height="6" fill="#141d19"/>
+      <circle cx="3" cy="3" r="1.5" fill="#1b2722" opacity="0.6"/>
+      <circle cx="9" cy="9" r="1.5" fill="#1b2722" opacity="0.6"/>
+    </pattern>
+
+    <!-- Filters for High-End Tactical Glows and Shadows -->
+    <filter id="neonCyanGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="strongDropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.95"/>
+    </filter>
+
+    <filter id="text3DShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#000000" flood-opacity="0.9"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#020805" flood-opacity="0.8"/>
+    </filter>
+
+    <!-- Text Path for Arched Top Text -->
+    <path id="archPath" d="M 180,240 A 380,340 0 0,1 844,240" fill="none"/>
+  </defs>
+
+  <!-- 1. BASE TACTICAL PLATE & CORNER BOLTS -->
+  <rect x="24" y="24" width="976" height="976" rx="64" fill="url(#chassisGrad)" stroke="url(#armorBevel)" stroke-width="12" filter="url(#strongDropShadow)"/>
+  
+  <!-- Inner Bevel & Carbon Plate -->
+  <rect x="52" y="52" width="920" height="920" rx="48" fill="url(#carbonPattern)" stroke="#1a2e24" stroke-width="4"/>
+
+  <!-- Tactical Hex Bolts in 4 Corners -->
+  <!-- Top Left -->
+  <g transform="translate(85, 85)">
+    <circle cx="0" cy="0" r="18" fill="#111815" stroke="#374d42" stroke-width="3"/>
+    <polygon points="0,-10 8.66,-5 8.66,5 0,10 -8.66,5 -8.66,-5" fill="#24332c" stroke="#4c6759" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="3" fill="#00e5ff" opacity="0.8"/>
+  </g>
+  <!-- Top Right -->
+  <g transform="translate(939, 85)">
+    <circle cx="0" cy="0" r="18" fill="#111815" stroke="#374d42" stroke-width="3"/>
+    <polygon points="0,-10 8.66,-5 8.66,5 0,10 -8.66,5 -8.66,-5" fill="#24332c" stroke="#4c6759" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="3" fill="#00e5ff" opacity="0.8"/>
+  </g>
+  <!-- Bottom Left -->
+  <g transform="translate(85, 939)">
+    <circle cx="0" cy="0" r="18" fill="#111815" stroke="#374d42" stroke-width="3"/>
+    <polygon points="0,-10 8.66,-5 8.66,5 0,10 -8.66,5 -8.66,-5" fill="#24332c" stroke="#4c6759" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="3" fill="#ef4444" opacity="0.8"/>
+  </g>
+  <!-- Bottom Right -->
+  <g transform="translate(939, 939)">
+    <circle cx="0" cy="0" r="18" fill="#111815" stroke="#374d42" stroke-width="3"/>
+    <polygon points="0,-10 8.66,-5 8.66,5 0,10 -8.66,5 -8.66,-5" fill="#24332c" stroke="#4c6759" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="3" fill="#10b981" opacity="0.8"/>
+  </g>
+
+  <!-- Fiber Optic Tactical Wires (Green and Red) at Bottom -->
+  <path d="M 120,930 Q 320,975 512,960 T 904,930" fill="none" stroke="#059669" stroke-width="4" opacity="0.6"/>
+  <path d="M 140,945 Q 360,985 512,972 T 880,945" fill="none" stroke="#dc2626" stroke-width="3" opacity="0.5"/>
+
+  <!-- 2. ARCHED TOP TITLE: "ESCUELA DE COMANDO Y ESTADO MAYOR" -->
+  <g filter="url(#text3DShadow)">
+    <text font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="34" font-weight="900" letter-spacing="8" fill="#040a07">
+      <textPath href="#archPath" startOffset="50%" text-anchor="middle">
+        ESCUELA DE COMANDO Y ESTADO MAYOR
+      </textPath>
+    </text>
+    <text font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="34" font-weight="900" letter-spacing="8" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1.2">
+      <textPath href="#archPath" startOffset="50%" text-anchor="middle">
+        ESCUELA DE COMANDO Y ESTADO MAYOR
+      </textPath>
+    </text>
+  </g>
+
+  <!-- 3. METALLIC LAUREL WREATH (Both Sides) -->
+  <g filter="url(#strongDropShadow)">
+    <!-- Left Branch -->
+    <g id="laurelLeaf">
+      <!-- Outer wreath arc -->
+      <path d="M 230,550 C 170,430 190,290 320,180" fill="none" stroke="url(#silver3D)" stroke-width="6"/>
+      <!-- Leaves left side -->
+      <path d="M 305,190 C 275,175 250,195 270,225 C 290,210 300,200 305,190 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+      <path d="M 260,225 C 230,220 215,245 240,270 C 255,250 260,235 260,225 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+      <path d="M 230,270 C 195,275 190,305 220,325 C 230,300 230,285 230,270 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+      <path d="M 210,325 C 175,340 180,375 210,385 C 220,360 215,340 210,325 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+      <path d="M 200,385 C 170,410 180,445 215,445 C 220,415 210,395 200,385 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+      <path d="M 205,450 C 180,480 200,515 235,510 C 235,480 220,460 205,450 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+      <path d="M 225,515 C 205,550 230,580 265,565 C 260,535 240,525 225,515 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="1"/>
+    </g>
+    <!-- Right Branch (Mirrored) -->
+    <g transform="translate(1024, 0) scale(-1, 1)">
+      <use href="#laurelLeaf"/>
+    </g>
+  </g>
+
+  <!-- 4. OPEN CYBER MANUAL / BOOK OF STRATEGY -->
+  <g id="cyberBook" transform="translate(512, 335)" filter="url(#strongDropShadow)">
+    <!-- Book Hardcover Base -->
+    <polygon points="-240,75 -10,95 0,110 10,95 240,75 225,-60 10,-45 0,-35 -10,-45 -225,-60" fill="#081410" stroke="#1f4433" stroke-width="4"/>
+    
+    <!-- Pages Left & Right with Circuit Glow -->
+    <!-- Left Page -->
+    <polygon points="-230,70 -10,88 -10,-40 -215,-55" fill="#0b241c" stroke="#256e4e" stroke-width="2"/>
+    <!-- Right Page -->
+    <polygon points="10,88 230,70 215,-55 10,-40" fill="#0b241c" stroke="#256e4e" stroke-width="2"/>
+    
+    <!-- Glowing Code Lines & Circuit Matrix on Pages -->
+    <g stroke="#00e5ff" stroke-width="2" opacity="0.85">
+      <!-- Left Page Code Columns -->
+      <line x1="-200" y1="-35" x2="-140" y2="-30"/>
+      <line x1="-200" y1="-20" x2="-70" y2="-12"/>
+      <line x1="-200" y1="-5" x2="-100" y2="0"/>
+      <line x1="-200" y1="10" x2="-50" y2="20"/>
+      <line x1="-200" y1="25" x2="-120" y2="32"/>
+      <line x1="-200" y1="40" x2="-80" y2="48"/>
+      <!-- Right Page Code Columns -->
+      <line x1="50" y1="-20" x2="200" y2="-35"/>
+      <line x1="50" y1="-5" x2="180" y2="-20"/>
+      <line x1="50" y1="10" x2="200" y2="-5"/>
+      <line x1="50" y1="25" x2="160" y2="10"/>
+      <line x1="50" y1="40" x2="190" y2="28"/>
+    </g>
+
+    <!-- Circuit traces radiating from book spine -->
+    <path d="M 0,-40 L 0,-100" stroke="#34d399" stroke-width="3" fill="none" filter="url(#neonCyanGlow)"/>
+    <circle cx="0" cy="-100" r="4" fill="#00e5ff"/>
+    <path d="M -10,-40 L -60,-90 L -120,-90" stroke="#00e5ff" stroke-width="2" fill="none"/>
+    <circle cx="-120" cy="-90" r="3" fill="#00e5ff"/>
+    <path d="M 10,-40 L 60,-90 L 120,-90" stroke="#00e5ff" stroke-width="2" fill="none"/>
+    <circle cx="120" cy="-90" r="3" fill="#00e5ff"/>
+  </g>
+
+  <!-- 5. HOLOGRAPHIC GLOWING CYAN BRAIN -->
+  <g id="cyanBrain" transform="translate(512, 185)" filter="url(#neonCyanGlow)">
+    <!-- Soft Glow Backdrop -->
+    <circle cx="0" cy="0" r="85" fill="url(#cyanGlowRadial)" opacity="0.6"/>
+    
+    <!-- Left Hemisphere -->
+    <path d="M -5,-55 C -45,-55 -80,-30 -80,10 C -80,45 -55,65 -25,65 C -15,65 -5,55 -5,45 Z" fill="#052822" stroke="#00e5ff" stroke-width="4.5"/>
+    <!-- Left Gyri / Convolutions -->
+    <path d="M -65,-5 C -40,-15 -30,10 -55,20 C -40,35 -20,15 -15,35" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M -50,-35 C -30,-40 -15,-20 -25,0" fill="none" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="-45" cy="5" r="3" fill="#ffffff"/>
+    <circle cx="-25" cy="-25" r="2.5" fill="#ffffff"/>
+
+    <!-- Right Hemisphere -->
+    <path d="M 5,-55 C 45,-55 80,-30 80,10 C 80,45 55,65 25,65 C 15,65 5,55 5,45 Z" fill="#052822" stroke="#00e5ff" stroke-width="4.5"/>
+    <!-- Right Gyri / Convolutions -->
+    <path d="M 65,-5 C 40,-15 30,10 55,20 C 40,35 20,15 15,35" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M 50,-35 C 30,-40 15,-20 25,0" fill="none" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="45" cy="5" r="3" fill="#ffffff"/>
+    <circle cx="25" cy="-25" r="2.5" fill="#ffffff"/>
+
+    <!-- Brain Stem & Connecting Circuit Tracks -->
+    <line x1="0" y1="45" x2="0" y2="80" stroke="#00ffff" stroke-width="4"/>
+    <circle cx="0" cy="80" r="5" fill="#ffffff"/>
+  </g>
+
+  <!-- 6. HIGH-TECH CYBER DAGGER / BLADE (Angled at 45 degrees, held by robotic fist) -->
+  <g id="cyberDagger" filter="url(#strongDropShadow)">
+    <!-- Blade with Glowing Edge -->
+    <!-- Blade Points from (512, 330) up-right towards (780, 180) and down-left towards (270, 480) -->
+    <!-- Center Blade Axis: rotation transform -->
+    <g transform="translate(512, 360) rotate(-38)">
+      <!-- Crossguard -->
+      <path d="M -60,40 L 60,40 L 45,60 L -45,60 Z" fill="url(#cyborgMetal)" stroke="#64748b" stroke-width="2"/>
+      <circle cx="0" cy="50" r="9" fill="#0b1713" stroke="#00e5ff" stroke-width="3"/>
+      <circle cx="0" cy="50" r="4" fill="#ffffff"/>
+
+      <!-- Hilt Grip -->
+      <rect x="-18" y="60" width="36" height="110" rx="6" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+      <!-- Hilt Grip Ribs -->
+      <line x1="-18" y1="80" x2="18" y2="80" stroke="#94a3b8" stroke-width="3"/>
+      <line x1="-18" y1="105" x2="18" y2="105" stroke="#94a3b8" stroke-width="3"/>
+      <line x1="-18" y1="130" x2="18" y2="130" stroke="#94a3b8" stroke-width="3"/>
+      <!-- Pommel -->
+      <polygon points="0,195 24,170 -24,170" fill="url(#silver3D)" stroke="#334155" stroke-width="2"/>
+
+      <!-- Dagger Double-Edged Blade (Extending upwards) -->
+      <polygon points="0,-270 34,40 0,32 -34,40" fill="url(#bladeGlow)" stroke="#38bdf8" stroke-width="3" filter="url(#neonCyanGlow)"/>
+      <!-- Inner High-Intensity Energy Spine -->
+      <polygon points="0,-250 10,32 0,25 -10,32" fill="#ffffff"/>
+      <!-- Energy Channel Nodes -->
+      <circle cx="0" cy="-60" r="4" fill="#ffffff"/>
+      <circle cx="0" cy="-140" r="3" fill="#ffffff"/>
+    </g>
+  </g>
+
+  <!-- 7. ROBOTIC CYBORG HAND (Grasping the Dagger) -->
+  <g id="cyborgHand" transform="translate(512, 370)" filter="url(#strongDropShadow)">
+    <!-- Wrist Armor Bracket -->
+    <path d="M -50,110 L 50,110 L 60,165 L -60,165 Z" fill="url(#cyborgMetal)" stroke="#64748b" stroke-width="3"/>
+    <circle cx="0" cy="138" r="8" fill="#0f172a" stroke="#00e5ff" stroke-width="2"/>
+
+    <!-- Forearm Mechanical Pistons -->
+    <rect x="-42" y="110" width="16" height="48" rx="4" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+    <rect x="26" y="110" width="16" height="48" rx="4" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+
+    <!-- Articulated Knuckles & Fingers Clenching -->
+    <!-- Finger 4 (Pinky) -->
+    <rect x="-56" y="55" width="112" height="24" rx="12" fill="url(#silver3D)" stroke="#1e293b" stroke-width="2.5"/>
+    <!-- Finger 3 (Ring) -->
+    <rect x="-62" y="30" width="124" height="26" rx="13" fill="url(#silver3D)" stroke="#1e293b" stroke-width="2.5"/>
+    <!-- Finger 2 (Middle) -->
+    <rect x="-65" y="4" width="130" height="27" rx="13.5" fill="url(#silver3D)" stroke="#1e293b" stroke-width="2.5"/>
+    <!-- Finger 1 (Index) -->
+    <rect x="-60" y="-22" width="120" height="26" rx="13" fill="url(#silver3D)" stroke="#1e293b" stroke-width="2.5"/>
+
+    <!-- Thumb Clamped Across Fingers -->
+    <path d="M -60,5 C -75,-25 -40,-45 0,-30 C 10,-20 10,-5 -20,-5 Z" fill="url(#silver3D)" stroke="#0f172a" stroke-width="2.5"/>
+    
+    <!-- Chrome Finger Joints & Rivets -->
+    <circle cx="-38" cy="67" r="5" fill="#475569" stroke="#94a3b8" stroke-width="1"/>
+    <circle cx="-42" cy="43" r="5" fill="#475569" stroke="#94a3b8" stroke-width="1"/>
+    <circle cx="-45" cy="17" r="5" fill="#475569" stroke="#94a3b8" stroke-width="1"/>
+    <circle cx="-40" cy="-9" r="5" fill="#475569" stroke="#94a3b8" stroke-width="1"/>
+  </g>
+
+  <!-- 8. PROMINENT 3D METALLIC TYPOGRAPHY -->
+  <g id="mainTypography" filter="url(#text3DShadow)">
+    
+    <!-- LINE 1: "INTELIGENCIA" -->
+    <!-- 3D Extrusion Shadow Behind -->
+    <text x="512" y="588" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="78" font-weight="900" letter-spacing="5" fill="#020805">
+      INTELIGENCIA
+    </text>
+    <text x="512" y="584" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="78" font-weight="900" letter-spacing="5" fill="#1e293b">
+      INTELIGENCIA
+    </text>
+    <!-- Foreground Beveled Text -->
+    <text x="512" y="580" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="78" font-weight="900" letter-spacing="5" fill="url(#silver3D)" stroke="#334155" stroke-width="2">
+      INTELIGENCIA
+    </text>
+
+    <!-- LINE 2: "ESTRATÉGICA" -->
+    <!-- 3D Extrusion Shadow Behind -->
+    <text x="512" y="668" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="74" font-weight="900" letter-spacing="6" fill="#020805">
+      ESTRATÉGICA
+    </text>
+    <text x="512" y="664" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="74" font-weight="900" letter-spacing="6" fill="#1e293b">
+      ESTRATÉGICA
+    </text>
+    <!-- Foreground Beveled Text -->
+    <text x="512" y="660" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="74" font-weight="900" letter-spacing="6" fill="url(#silver3D)" stroke="#334155" stroke-width="2">
+      ESTRATÉGICA
+    </text>
+
+    <!-- LINE 3: "BOLIVIA" (Golden 3D Extruded) -->
+    <!-- 3D Extrusion Shadow Behind -->
+    <text x="512" y="738" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="62" font-weight="900" letter-spacing="12" fill="#361a03">
+      BOLIVIA
+    </text>
+    <text x="512" y="734" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="62" font-weight="900" letter-spacing="12" fill="#78350f">
+      BOLIVIA
+    </text>
+    <!-- Foreground Golden Text -->
+    <text x="512" y="730" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="62" font-weight="900" letter-spacing="12" fill="url(#gold3D)" stroke="#b45309" stroke-width="2">
+      BOLIVIA
+    </text>
+  </g>
+
+  <!-- 9. METALLIC SCROLL / RIBBON BANNER: "SER ANTES QUE PARECER" -->
+  <g id="mottoBanner" transform="translate(512, 815)" filter="url(#strongDropShadow)">
+    <!-- Ribbon Shadow Base -->
+    <path d="M -360,25 C -240,-15 240,-15 360,25 L 340,75 C 220,35 -220,35 -340,75 Z" fill="#080e0b"/>
+    
+    <!-- Ribbon Folds Left End (Swallowtail) -->
+    <polygon points="-360,25 -410,-5 -390,30 -415,65 -350,55" fill="#475569" stroke="#1e293b" stroke-width="2"/>
+    <polygon points="-350,55 -360,25 -320,35" fill="#1e293b"/>
+    
+    <!-- Ribbon Folds Right End (Swallowtail) -->
+    <polygon points="360,25 410,-5 390,30 415,65 350,55" fill="#475569" stroke="#1e293b" stroke-width="2"/>
+    <polygon points="350,55 360,25 320,35" fill="#1e293b"/>
+
+    <!-- Main Front Banner Arc -->
+    <path d="M -340,20 C -220,-10 220,-10 340,20 L 325,70 C 210,40 -210,40 -325,70 Z" fill="url(#silver3D)" stroke="#1e293b" stroke-width="3"/>
+    
+    <!-- Banner Embossed Inner Ridge -->
+    <path d="M -325,28 C -210,-2 210,-2 325,28" fill="none" stroke="#f8fafc" stroke-width="2"/>
+    <path d="M -310,62 C -200,32 200,32 310,62" fill="none" stroke="#475569" stroke-width="2"/>
+
+    <!-- Motto Text: "SER ANTES QUE PARECER" -->
+    <g filter="url(#text3DShadow)">
+      <!-- Drop shadow for text inside banner -->
+      <text x="0" y="55" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="34" font-weight="900" letter-spacing="4" fill="#0f172a">
+        "SER ANTES QUE PARECER"
+      </text>
+      <!-- Foreground Embossed Text -->
+      <text x="0" y="52" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Arial Black', sans-serif" font-size="34" font-weight="900" letter-spacing="4" fill="#091410" stroke="#f8fafc" stroke-width="0.8">
+        "SER ANTES QUE PARECER"
+      </text>
+    </g>
+  </g>
+
+</svg>`;
+}
+
+async function generateAllAssets() {
+  console.log('Generating high-resolution military emblem and desktop/mobile icon assets...');
+
+  const publicDir = path.join(process.cwd(), 'public');
+  const distDir = path.join(process.cwd(), 'dist');
+
+  const svgContent = createEmblemSvg({ width: 1024, height: 1024 });
+
+  // Save icon.svg and icon-maskable.svg
+  fs.writeFileSync(path.join(publicDir, 'icon.svg'), svgContent);
+  fs.writeFileSync(path.join(publicDir, 'icon-maskable.svg'), svgContent);
+
+  const svgBuffer = Buffer.from(svgContent);
+
+  // 1. High Resolution Presentation Artwork (1200x1200 / 1200x960)
+  const fullArtwork = await sharp(svgBuffer)
+    .resize(1200, 1200)
+    .jpeg({ quality: 95 })
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'Gemini_Generated_Image_h1ntq6h1ntq6h1nt.jpg'), fullArtwork);
+  console.log('Saved /public/Gemini_Generated_Image_h1ntq6h1ntq6h1nt.jpg');
+
+  // 2. PWA 512x512
+  const pwa512 = await sharp(svgBuffer)
+    .resize(512, 512)
+    .png()
+    .toBuffer();
+  fs.writeFileSync(path.join(publicDir, 'pwa-512x512.png'), pwa512);
+  fs.writeFileSync(path.join(publicDir, 'pwa-maskable-512x512.png'), pwa512);
+  console.log('Saved /public/pwa-512x512.png & pwa-maskable-512x512.png');
+
+  // 3. PWA 192x192
+  const pwa192 = await sharp(svgBuffer)
+    .resize(192, 192)
+    .png()
+    .toBuffer();
+  fs.writeFileSync(path.join(publicDir, 'pwa-192x192.png'), pwa192);
+  console.log('Saved /public/pwa-192x192.png');
+
+  // 4. Apple Touch Icon (180x180)
+  const appleTouch = await sharp(svgBuffer)
+    .resize(180, 180)
+    .png()
+    .toBuffer();
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), appleTouch);
+  console.log('Saved /public/apple-touch-icon.png');
+
+  // 5. Favicon 64x64 PNG
+  const faviconPng = await sharp(svgBuffer)
+    .resize(64, 64)
+    .png()
+    .toBuffer();
+  fs.writeFileSync(path.join(publicDir, 'favicon.ico'), faviconPng);
+  fs.writeFileSync(path.join(publicDir, 'favicon.png'), faviconPng);
+  console.log('Saved /public/favicon.ico & favicon.png');
+
+  // If dist directory exists, also copy to dist
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'Gemini_Generated_Image_h1ntq6h1ntq6h1nt.jpg'), fullArtwork);
+    fs.writeFileSync(path.join(distDir, 'pwa-512x512.png'), pwa512);
+    fs.writeFileSync(path.join(distDir, 'pwa-maskable-512x512.png'), pwa512);
+    fs.writeFileSync(path.join(distDir, 'pwa-192x192.png'), pwa192);
+    fs.writeFileSync(path.join(distDir, 'apple-touch-icon.png'), appleTouch);
+    fs.writeFileSync(path.join(distDir, 'icon.svg'), svgContent);
+    fs.writeFileSync(path.join(distDir, 'icon-maskable.svg'), svgContent);
+    fs.writeFileSync(path.join(distDir, 'favicon.ico'), faviconPng);
+    console.log('Synchronized assets to /dist');
+  }
+
+  console.log('All military emblem and desktop/mobile icon assets successfully generated!');
+}
+
+generateAllAssets().catch(err => {
+  console.error('Error generating assets:', err);
+  process.exit(1);
+});

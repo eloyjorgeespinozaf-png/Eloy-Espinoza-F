@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { InstitutionalEmblem } from './InstitutionalEmblem';
 import { OperatorProfile } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SidebarProps {
   currentTab: string;
@@ -150,7 +151,10 @@ export function Sidebar({
           })}
 
           {/* Emergency Alert Protocol */}
-          <div className="pt-4 px-1">
+          <div className="pt-4 px-1 space-y-3">
+            {/* Install / Download Application Button */}
+            <PWAInstallButton variant="sidebar" />
+
             <div className="p-3 bg-[#081a13] border border-[#16412e] rounded-xs text-[11px] font-mono text-[#8cb0a0]">
               <div className="flex items-center gap-2 text-[#facc15] font-semibold mb-1">
                 <ShieldAlert className="w-3.5 h-3.5" />

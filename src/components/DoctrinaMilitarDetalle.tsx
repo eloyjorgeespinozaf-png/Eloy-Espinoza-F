@@ -219,6 +219,9 @@ export function DoctrinaMilitarDetalle({ onClose, onUpdateXp, initialXp = 40 }: 
   return (
     <div 
       id="doctrina-militar-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       className="fixed inset-0 z-70 flex items-center justify-center p-2 sm:p-4 lg:p-6 bg-[#020704]/90 backdrop-blur-md overflow-y-auto animate-fadeIn"
     >
       <div 

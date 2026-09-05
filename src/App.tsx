@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { InstitutionalEmblem } from './components/InstitutionalEmblem';
 import { CentroDeOperaciones } from './components/CentroDeOperaciones';
+import { PWAInstallButton } from './components/PWAInstallButton';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 export default function App() {
   // Authentication & View State (Defaults directly to the Centro de Operaciones Dashboard)
@@ -234,6 +236,8 @@ export default function App() {
                   </>
                 )}
               </button>
+              {/* Install and Download Button on Login Screen */}
+              <PWAInstallButton variant="login" />
             </div>
           </form>
 
@@ -245,6 +249,9 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Offline Status Connectivity Banner */}
+      <OfflineIndicator />
 
       {/* Bottom Tactical Footer */}
       <footer className="w-full max-w-4xl py-3 border-t border-[#123626] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-mono text-[#527363] z-10">

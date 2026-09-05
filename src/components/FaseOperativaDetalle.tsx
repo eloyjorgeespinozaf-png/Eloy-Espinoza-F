@@ -1,517 +1,309 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ShieldCheck, 
-  ShieldAlert, 
-  Clock, 
-  AlertTriangle, 
-  Radio, 
-  Send, 
-  RotateCcw, 
   X, 
-  Zap, 
-  Scale, 
-  Bot, 
-  User, 
-  Sparkles, 
-  Lock, 
-  Unlock, 
-  Cpu, 
-  Wifi, 
-  Layers, 
+  Radio, 
+  Satellite, 
+  Shield, 
+  Send, 
+  Printer, 
+  Award, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Clock, 
+  Activity, 
+  FileText, 
   Check, 
-  EyeOff, 
-  ArrowRight,
-  Activity,
-  Compass,
-  Crosshair,
-  Satellite,
-  Globe,
-  Users,
-  Maximize2,
+  Eye, 
   Radar,
+  ArrowRight,
+  Sparkles,
+  Lock,
   Flame,
-  Plane
+  Globe
 } from 'lucide-react';
+import { safePrint } from '../utils/safePrint';
 
 interface FaseOperativaDetalleProps {
   onClose?: () => void;
   onEnterModule?: () => void;
+  onCompletePhase?: () => void;
 }
 
 interface ChatMessage {
   id: string;
-  sender: 'ai' | 'redteam' | 'user' | 'system';
   author: string;
   text: string;
-  timestamp: string;
+  type: 'ai' | 'user' | 'red';
 }
 
-export function FaseOperativaDetalle({ onClose }: FaseOperativaDetalleProps) {
-  // Threat Escalation: 1 (Bajo/Inicial), 2 (Guerra Electrónica), 3 (Colapso Multidominio)
-  const [difficulty, setDifficulty] = useState<1 | 2 | 3>(1);
+export function FaseOperativaDetalle({ onClose, onCompletePhase }: FaseOperativaDetalleProps) {
+  // Global Application State
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [saberXP, setSaberXP] = useState<number>(0);
+  const [hacerXP, setHacerXP] = useState<number>(0);
 
-  // Operational Stress Timer (in seconds, 04:00)
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(240);
-  const [timerActive, setTimerActive] = useState<boolean>(true);
-  const [isTimeExpired, setIsTimeExpired] = useState<boolean>(false);
+  // Tab 1: Centro de Fusión ISR (Sensors)
+  const [activeSensor, setActiveSensor] = useState<'osint' | 'imint' | 'sigint' | 'humint'>('osint');
 
-  // Contrast Mode / Laboratorio Didáctico
-  const [showContrastModal, setShowContrastModal] = useState<boolean>(false);
+  // Tab 2: El Método Gibson (Gibson Matrix)
+  const [gibConf1, setGibConf1] = useState<string>('none');
+  const [gibEx1, setGibEx1] = useState<string>('none');
+  const [gibConf2, setGibConf2] = useState<string>('none');
+  const [gibEx2, setGibEx2] = useState<string>('none');
+  const [gibsonValidated, setGibsonValidated] = useState<boolean>(false);
+  const [gibsonXPClaimed, setGibsonXPClaimed] = useState<boolean>(false);
 
-  // Active Sensor Layers
-  const [activeSensors, setActiveSensors] = useState({
-    sigint: false,
-    imint: false,
-    osint: false,
-    humint: false
-  });
+  // Tab 3: Resguardo OPSEC de Campaña
+  const [emconActive, setEmconActive] = useState<boolean>(false);
+  const [geointSanitized, setGeointSanitized] = useState<boolean>(false);
 
-  // OPSEC Alert State
-  const [showOpsecAlert, setShowOpsecAlert] = useState<boolean>(false);
-  const [opsecSanitized, setOpsecSanitized] = useState<boolean>(false);
-
-  // Selected Marker Intel Readout
-  const [mapTelemetry, setMapTelemetry] = useState<string>(
-    'SISTEMA LISTO // SELECCIONE SENSORES PARA GENERAR TELEMETRÍA'
-  );
-  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
-
-  // Synchronized Matrix Selection
-  const [syncMatrix, setSyncMatrix] = useState({
-    rOeste: 'none',
-    aOeste: 'none',
-    rEste: 'none',
-    aEste: 'none'
-  });
-  const [isSyncSuccess, setIsSyncSuccess] = useState<boolean>(false);
-
-  // Cognitive & Risk Metrics
-  const [metrics, setMetrics] = useState({
-    confirmacion: 40,
-    decepcion: 80,
-    resiliencia: 10
-  });
-
-  // XP Tracker
-  const [earnedXp, setEarnedXp] = useState<number>(0);
-
-  // Chat Messages
+  // Tab 4: Red Team (LISA) & Evaluación Final
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
-      id: 'msg-1',
-      sender: 'ai',
-      author: 'EVALUADOR LISA',
-      text: 'Bienvenido analista a la Fase IV: Inmersión Operativa. En la pantalla táctica tenemos reportes divergentes: el canal OSINT (E1) muestra convoyes en el oeste, pero su firma térmica es nula en el radar satelital SAR (E3). Al mismo tiempo, se registra un ciberataque industrial en la red eléctrica del este (E2). ¿Cuál es su inferencia abductiva en base a los anillos de Warden?',
-      timestamp: '00:00:01'
+      id: 'init-1',
+      author: 'TUTOR LISA (CYBER-RED)',
+      text: 'Oficial analista, iniciamos su examen final sumativo para la acreditación en la CVIE. Al integrar los flujos Multi-INT en tiempo real de la frontera norte boliviana: ¿Hacia qué sector geográfico orientará los refuerzos tácticos defensivos y bajo qué justificación científica basada en el satélite SAR desvirtúa el convoy del oeste?',
+      type: 'ai'
     }
   ]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [simStep, setSimStep] = useState<number>(0);
+  const [resilienceScore, setResilienceScore] = useState<number>(0);
+  const [showScorecard, setShowScorecard] = useState<boolean>(false);
 
-  const [analystInput, setAnalystInput] = useState<string>('');
+  // Operational Timers (4 minutes per stage)
+  const [timers, setTimers] = useState<{ [key: string]: number }>({
+    w1: 240,
+    w2: 240,
+    w3: 240,
+    w4: 240
+  });
+
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const scorecardRef = useRef<HTMLDivElement>(null);
 
-  // Format time mm:ss
+  // Global XP calculation
+  const globalXP = Math.min(100, saberXP + hacerXP);
+
+  // Countdown timer for the currently active tab
+  useEffect(() => {
+    const key = `w${activeTab + 1}`;
+    const timerInterval = setInterval(() => {
+      setTimers((prev) => {
+        if (prev[key] <= 0) return prev;
+        return { ...prev, [key]: prev[key] - 1 };
+      });
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, [activeTab]);
+
+  // Scroll chat to bottom
+  useEffect(() => {
+    if (activeTab === 3 && chatBottomRef.current) {
+      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, activeTab]);
+
+  // Helper to format seconds as mm:ss
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Timer Effect
+  // Evaluate Gibson Matrix inputs
+  const isOsintCorrect = gibConf1 === 'F' && gibEx1 === '5';
+  const isImintCorrect = gibConf2 === 'A' && gibEx2 === '1';
+
   useEffect(() => {
-    if (!timerActive || remainingSeconds <= 0) return;
-
-    const interval = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsTimeExpired(true);
-          setTimerActive(false);
-          addChatMessage(
-            'redteam',
-            'RED TEAM ADVERSARIO',
-            'MISIÓN FALLIDA // TIEMPO AGOTADO: La parálisis cognitiva permitió que el oponente destruyera las subestaciones SCADA del este y consumara su finta en el oeste.'
-          );
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timerActive, remainingSeconds]);
-
-  // Auto-scroll chat
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
-  const addChatMessage = (sender: ChatMessage['sender'], author: string, text: string) => {
-    const d = new Date();
-    const ts = d.toTimeString().split(' ')[0];
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `msg-${Date.now()}-${Math.random()}`,
-        sender,
-        author,
-        text,
-        timestamp: ts
-      }
-    ]);
-  };
-
-  // Toggle Sensor Layer
-  const handleToggleSensor = (sensorId: 'sigint' | 'imint' | 'osint' | 'humint') => {
-    const nextState = !activeSensors[sensorId];
-    const updated = { ...activeSensors, [sensorId]: nextState };
-    setActiveSensors(updated);
-
-    // If both OSINT and IMINT are active, discrepancy is revealed!
-    if (updated.osint && updated.imint) {
-      setMetrics((prev) => ({
-        ...prev,
-        decepcion: Math.min(prev.decepcion, 30),
-        confirmacion: Math.min(prev.confirmacion, 25)
-      }));
-      setMapTelemetry(
-        'DISCREPANCIA DETECTADA: Señuelos de tanques inflables sin firma térmica en el oeste. ¡Finta táctica hostil al descubierto!'
-      );
-      setEarnedXp((xp) => xp + 20);
-    } else if (nextState) {
-      if (sensorId === 'osint') {
-        setMapTelemetry('OSINT ACTIVO: Canal de fuentes abiertas reporta movimiento blindado en el Sector Oeste.');
-      } else if (sensorId === 'imint') {
-        setMapTelemetry('IMINT/SAR ACTIVO: Satélite de Apertura Sintética escaneando superficie con bandas radar.');
-      } else if (sensorId === 'sigint') {
-        setMapTelemetry('SIGINT ACTIVO: Interceptaciones electromagnéticas de radio y telecomunicaciones hostiles.');
-      } else if (sensorId === 'humint') {
-        setMapTelemetry('HUMINT ACTIVO: Informantes locales en terreno reportando convoyes clandestinos nocturnos.');
-      }
-    }
-  };
-
-  // Marker Intel Click
-  const handleMarkerClick = (type: 'osint' | 'imint' | 'sigint') => {
-    setSelectedMarkerId(type);
-    if (type === 'osint') {
-      setMapTelemetry(
-        'OSINT Telemetría: Videos masivos de blindados (Oeste) con alta dispersión pero dudosa veracidad de origen.'
-      );
-    } else if (type === 'imint') {
-      setMapTelemetry(
-        'IMINT Satélite SAR: Siluetas de tanques confirmadas estáticas, firma térmica de 0.05% (SEÑUELOS INFLABLES DETECTADOS).'
-      );
-    } else if (type === 'sigint') {
-      setMapTelemetry(
-        'SIGINT Guerra Electrónica: Intento de denegación ciber-industrial en SCADA de energía (Sector Este).'
-      );
-    }
-  };
-
-  // OPSEC Sanitization
-  const handleSanitizeOpsecGeo = () => {
-    if (opsecSanitized) return;
-    setOpsecSanitized(true);
-    setShowOpsecAlert(false);
-
-    setMetrics((prev) => ({
-      ...prev,
-      resiliencia: Math.min(100, prev.resiliencia + 40)
-    }));
-    setEarnedXp((xp) => xp + 25);
-
-    addChatMessage(
-      'ai',
-      'CVIE SISTEMA',
-      '✓ Sanitización OPSEC completada con éxito (+25 XP). Metadatos GPS eliminados. El oponente ha perdido el vector de fuego de precisión.'
-    );
-  };
-
-  // Sincronización Operativa Matrix Evaluation
-  const handleMatrixChange = (field: 'rOeste' | 'aOeste' | 'rEste' | 'aEste', value: string) => {
-    const updated = { ...syncMatrix, [field]: value };
-    setSyncMatrix(updated);
-
-    // Correct tactical assignment:
-    // Oeste: Anillo 3 (Infraestructura de líneas de finta) + Vuelo UAV de reconocimiento
-    // Este: Anillo 2 (Elementos esenciales / SCADA) + Air-Gap Ciberdefensa
-    if (
-      updated.rOeste === 'anillo3' &&
-      updated.aOeste === 'vuelo' &&
-      updated.rEste === 'anillo2' &&
-      updated.aEste === 'airgap'
-    ) {
-      setIsSyncSuccess(true);
-      setMetrics({
-        confirmacion: 10,
-        decepcion: 15,
-        resiliencia: 95
-      });
-      setEarnedXp((xp) => xp + 45);
-
-      addChatMessage(
-        'ai',
-        'EVALUADOR LISA',
-        '✓ Sincronización Estratégica PERFECTA (+45 XP). Ha asignado el Air-Gap de ciberdefensa en el Anillo 2 (Este) y reconocimiento UAV en el Anillo 3 (Oeste), mitigando la finta del adversario de manera óptima.'
-      );
+    if (isOsintCorrect && isImintCorrect) {
+      setGibsonValidated(true);
     } else {
-      setIsSyncSuccess(false);
+      setGibsonValidated(false);
+    }
+  }, [isOsintCorrect, isImintCorrect]);
+
+  const handleSaveGibsonXP = () => {
+    if (!gibsonXPClaimed) {
+      setSaberXP((prev) => Math.max(prev, 30));
+      setGibsonXPClaimed(true);
     }
   };
 
-  // Inyección de Incidente Híbrido (Ruido Sintético)
-  const handleInjectHybridIncident = () => {
-    setRemainingSeconds((prev) => Math.max(10, prev - 40));
-    setShowOpsecAlert(true);
-    setMetrics((prev) => ({
-      ...prev,
-      decepcion: Math.min(100, prev.decepcion + 20),
-      confirmacion: Math.min(100, prev.confirmacion + 15),
-      resiliencia: Math.max(5, prev.resiliencia - 15)
-    }));
-
-    addChatMessage(
-      'redteam',
-      'RED TEAM ENEMIGO',
-      '⚠️ ¡ATAQUE DE DESINFORMACIÓN MULTIDOMINIO! Se acelera la ventana de decisión (-40s). Se ha inyectado ruido informático y fotos con metadatos GPS en el canal de crisis.'
-    );
+  // Evaluate OPSEC actions
+  const handleToggleEmcon = () => {
+    const nextVal = !emconActive;
+    setEmconActive(nextVal);
+    if (nextVal && geointSanitized) {
+      setHacerXP((prev) => Math.max(prev, 30));
+    }
   };
 
-  // Comparativa didáctica: Simular Error de Sesgo Típico
-  const applyFlawedConfirmationBiasPreset = () => {
-    setActiveSensors({
-      sigint: false,
-      imint: false,
-      osint: true,
-      humint: false
-    });
-    setSyncMatrix({
-      rOeste: 'anillo1',
-      aOeste: 'fuegos',
-      rEste: 'none',
-      aEste: 'none'
-    });
-    setMetrics({
-      confirmacion: 85,
-      decepcion: 90,
-      resiliencia: 15
-    });
-    setShowOpsecAlert(true);
-    setOpsecSanitized(false);
-    setMapTelemetry('ALERTA: Concentración masiva de artillería en el Oeste sobre señuelos plásticos sin firma térmica.');
-
-    addChatMessage(
-      'redteam',
-      'SIMULADOR DE SESGO TÍPICO',
-      'MODO DIDÁCTICO ILUSTRATIVO: Se muestra el error arquetípico en el que el analista se guía únicamente por redes sociales (OSINT), concentra su fuego en el Oeste creyendo atacar blindados reales, y descuida el ciberataque al SCADA del Este (Anillo 2).'
-    );
+  const handleSanitizeGeoint = () => {
+    setGeointSanitized(true);
+    if (emconActive) {
+      setHacerXP((prev) => Math.max(prev, 30));
+    }
   };
 
-  // Comparativa didáctica: Aplicar Fusión Multi-Sensor Óptima
-  const applyOptimalFusionPreset = () => {
-    setActiveSensors({
-      sigint: true,
-      imint: true,
-      osint: true,
-      humint: true
-    });
-    setSyncMatrix({
-      rOeste: 'anillo3',
-      aOeste: 'vuelo',
-      rEste: 'anillo2',
-      aEste: 'airgap'
-    });
-    setIsSyncSuccess(true);
-    setMetrics({
-      confirmacion: 10,
-      decepcion: 15,
-      resiliencia: 95
-    });
-    setShowOpsecAlert(false);
-    setOpsecSanitized(true);
-    setEarnedXp(90);
-    setMapTelemetry('FUSIÓN ISR TOTAL: 4 de 4 sensores integrados. Señuelos del Oeste neutralizados y red SCADA del Este blindada.');
-
-    addChatMessage(
-      'ai',
-      'EVALUADOR LISA',
-      'FUSIÓN MULTIDOMINIO ÓPTIMA APLICADA (+90 XP): Las 4 capas de sensores ISR revelan la finta. Se asignan los recursos de acuerdo a los Cinco Anillos de Warden, garantizando la superioridad en la toma de decisiones.'
-    );
-  };
-
-  // Socratic Chat Decision
-  const handleSendAnalystDecision = (e?: React.FormEvent) => {
+  // Submit response in Red Team Chat
+  const handleSubmitChat = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const text = analystInput.trim();
-    if (!text) return;
+    const txt = chatInput.trim();
+    if (!txt) return;
 
-    addChatMessage('user', 'ANALISTA TÁCTICO', text);
-    setAnalystInput('');
+    // Append user message
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      author: 'ANALISTA DE INTELIGENCIA',
+      text: txt,
+      type: 'user'
+    };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput('');
+
+    const lower = txt.toLowerCase();
 
     setTimeout(() => {
-      evaluateDialoguePedagogy(text.toLowerCase());
+      if (simStep === 0) {
+        const sectorMatched = lower.includes('este') || lower.includes('scada') || lower.includes('fluvial');
+        const reasonMatched = lower.includes('calor') || lower.includes('térmic') || lower.includes('termic') || lower.includes('sar') || lower.includes('señuel') || lower.includes('senuel');
+
+        if (sectorMatched && reasonMatched) {
+          const aiMsg: ChatMessage = {
+            id: `ai-${Date.now()}`,
+            author: 'TUTOR LISA (CYBER-RED)',
+            text: 'Excelente deducción analítica. El satélite SAR demuestra firma térmica nula (temperatura ambiente) en el Oeste, delatando los señuelos inflables hostiles. Por ende, la verdadera penetración asimétrica es en el Sector Este. Segunda pregunta: ¿Qué protocolos OPSEC activó para denegar la interceptación electromagnética de nuestra artillería y evitar un contragolpe hostil?',
+            type: 'ai'
+          };
+          setChatMessages((prev) => [...prev, aiMsg]);
+          setSaberXP(50);
+          setHacerXP((prev) => Math.min(50, prev + 10));
+          setSimStep(1);
+        } else {
+          const redMsg: ChatMessage = {
+            id: `red-${Date.now()}`,
+            author: 'TUTOR LISA (CYBER-RED)',
+            text: 'Respuesta vulnerable. Se está anclando en la masa de blindados falsos del Oeste (propaganda OSINT). Reevalúe los informes del satélite SAR y recuerde el principio de falsación.',
+            type: 'red'
+          };
+          setChatMessages((prev) => [...prev, redMsg]);
+        }
+      } else if (simStep === 1) {
+        const opsecMatched = lower.includes('emcon') || lower.includes('silencio') || lower.includes('sanitiz') || lower.includes('exif') || lower.includes('gps');
+
+        if (opsecMatched) {
+          const aiMsg: ChatMessage = {
+            id: `ai-${Date.now()}`,
+            author: 'TUTOR LISA (CYBER-RED)',
+            text: 'Correcto. La combinación del silencio EMCON y la sanitización de metadatos GEOINT EXIF protege de forma hermética el despliegue del Ejército de Bolivia. Examen completado con distinción en la ECEME.',
+            type: 'ai'
+          };
+          setChatMessages((prev) => [...prev, aiMsg]);
+          setHacerXP(50);
+          setResilienceScore(100);
+          if (onCompletePhase) onCompletePhase();
+        } else {
+          const redMsg: ChatMessage = {
+            id: `red-${Date.now()}`,
+            author: 'TUTOR LISA (CYBER-RED)',
+            text: 'Vulnerable analista. Sin silencio EMCON de transmisiones o sin sanitización EXIF, sus radares y piezas de artillería quedarán expuestos a contrabatería táctica en minutos.',
+            type: 'red'
+          };
+          setChatMessages((prev) => [...prev, redMsg]);
+        }
+      }
     }, 600);
   };
 
-  const evaluateDialoguePedagogy = (text: string) => {
-    const hasKeyConcepts =
-      text.includes('finta') ||
-      text.includes('señuelo') ||
-      text.includes('este') ||
-      text.includes('scada') ||
-      text.includes('warden') ||
-      text.includes('airgap') ||
-      text.includes('air-gap') ||
-      text.includes('exif') ||
-      text.includes('sanitiz') ||
-      text.includes('recon') ||
-      text.includes('uav') ||
-      text.includes('sar') ||
-      text.includes('imint') ||
-      text.includes('ockham');
-
-    if (hasKeyConcepts) {
-      addChatMessage(
-        'ai',
-        'EVALUADOR LISA',
-        'Excelente nivel de discernimiento estratégico. Ha roto la fijación mental (Sesgo de Confirmación) sobre el oeste al correlacionar las lecturas frías del radar SAR y aislar la red SCADA del este. Incrementando complejidad operativa.'
-      );
-
-      setEarnedXp((xp) => xp + 25);
-
-      if (difficulty === 1) {
-        setDifficulty(2);
-        addChatMessage(
-          'redteam',
-          'RED TEAM ENEMIGO',
-          'FASE IV NIVEL 2: Desplegando interceptaciones electrónicas tácticas sobre la subestación de suministro energético en el Este.'
-        );
-      } else if (difficulty === 2) {
-        setDifficulty(3);
-        setRemainingSeconds((prev) => Math.min(prev, 60));
-        addChatMessage(
-          'redteam',
-          'RED TEAM ENEMIGO',
-          'FASE IV NIVEL 3 (COLAPSO): Ventana OODA colapsada a 60 segundos. Se requiere confirmación inmediata de la directiva de la ECEME para contrarrestar la ofensiva asimétrica.'
-        );
-      }
-    } else {
-      addChatMessage(
-        'ai',
-        'EVALUADOR LISA',
-        'ADVERTENCIA: Su razonamiento es vulnerable. Concentrar fuerzas de fuego en el oeste es caer en el cebo de desinformación sembrado por el oponente en el canal OSINT sin verificar las firmas térmicas del radar SAR.'
-      );
-    }
+  const handleGenerateScorecard = () => {
+    setShowScorecard(true);
+    setTimeout(() => {
+      scorecardRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 200);
   };
 
-  const getThreatBadge = () => {
-    switch (difficulty) {
-      case 1:
-        return (
-          <span className="px-3 py-1 bg-[#10b981]/10 border border-[#10b981] text-[#10b981] font-mono text-[11px] font-bold rounded-2xs tracking-wider uppercase">
-            NIVEL 1: BAJO
-          </span>
-        );
-      case 2:
-        return (
-          <span className="px-3 py-1 bg-[#f59e0b]/10 border border-[#f59e0b] text-[#f59e0b] font-mono text-[11px] font-bold rounded-2xs tracking-wider uppercase animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.25)]">
-            NIVEL 2: GUERRA ELECTRÓNICA
-          </span>
-        );
-      case 3:
-        return (
-          <span className="px-3 py-1 bg-[#ff0055]/20 border border-[#ff0055] text-[#ff0055] font-mono text-[11px] font-bold rounded-2xs tracking-wider uppercase shadow-[0_0_15px_rgba(255,0,85,0.4)] animate-pulse">
-            NIVEL 3: COLAPSO MULTIDOMINIO
-          </span>
-        );
-    }
-  };
-
-  const activeSensorCount = Object.values(activeSensors).filter(Boolean).length;
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div 
-      id="fase-operativa-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-3 lg:p-5 bg-[#030712]/90 backdrop-blur-md overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex flex-col p-2 sm:p-4 text-slate-100 print:bg-white print:p-0 print:m-0"
     >
-      {/* Contenedor Principal Dashboard CVIE Fase IV */}
-      <div 
-        id="fase-operativa-container"
-        className="relative w-full max-w-[1620px] bg-[#090f1f] border border-[#1e293b] rounded-xs shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden my-auto flex flex-col max-h-[96vh]"
-      >
-        {/* Retícula militar táctica en esquinas */}
-        <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#00ffff] z-30 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#00ffff] z-30 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#00ffff] z-30 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#00ffff] z-30 pointer-events-none" />
+      
+      {/* Embedded Styles for Radar Animation and Media Print */}
+      <style>{`
+        @keyframes radar-sweep {
+          0% { top: 0; }
+          100% { top: 100%; }
+        }
+        .radar-line-anim {
+          position: absolute;
+          width: 100%;
+          height: 2px;
+          background: rgba(0, 255, 255, 0.6);
+          top: 0;
+          left: 0;
+          animation: radar-sweep 4s linear infinite;
+        }
+        @keyframes pulse-blip {
+          from { opacity: 0.3; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1.3); }
+        }
+        .blip-pulse-red {
+          animation: pulse-blip 1s infinite alternate;
+        }
+        .blip-pulse-amber {
+          animation: pulse-blip 1.5s infinite alternate;
+        }
+        @media print {
+          body * { visibility: hidden !important; }
+          #scorecard-print-area, #scorecard-print-area * { visibility: visible !important; }
+          #scorecard-print-area {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            color: #000 !important;
+            background: #fff !important;
+            padding: 40px;
+            font-family: "Times New Roman", Times, serif;
+          }
+        }
+      `}</style>
 
-        {/* 1. OPERATIONAL TOP BAR */}
-        <header className="relative z-20 bg-[#060b16] border-b-2 border-[#1e293b] px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+      {/* Main Container Box */}
+      <div className="max-w-[1600px] w-full mx-auto my-auto bg-[#070d1e] border border-[#12254d] rounded-lg overflow-hidden flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.85)] print:hidden">
+        
+        {/* TOP OPERATIONAL BAR */}
+        <header className="bg-[#030612] border-b-2 border-[#12254d] px-4 sm:px-6 py-3.5 flex justify-between items-center flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <span className="bg-[#00ffff]/10 border border-[#00ffff] text-[#00ffff] font-mono text-[11px] px-2.5 py-1 rounded-2xs tracking-widest uppercase shadow-[0_0_6px_rgba(0,255,255,0.3)]">
-              CVIE FASE IV // INMERSIÓN TOTAL
+            <span className="bg-[#00ffff]/10 border border-[#00ffff] text-[#00ffff] font-mono text-[11px] sm:text-xs px-2.5 py-1 rounded tracking-widest uppercase font-bold">
+              CVIE FASE IV // INMERSIÓN OPERATIVA
             </span>
             <div>
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                Operación Cóndor: Fusión ISR y Respuesta de Guerra Híbrida
+              <h1 className="text-sm sm:text-base font-bold text-white leading-tight">
+                Fusión de Sensores ISR en Tiempo Real (Multi-INT)
               </h1>
-              <p className="text-xs text-[#64748b]">
-                Sincronización Multidominio // Teoría de Warden // Toma de Decisión Bajo Estrés Extremo [ECEME]
+              <p className="text-[11px] text-[#64748b]">
+                Modelo de Amenazas EM-MI-AA-02 de la ECEME [Doctrina de Bolivia]
               </p>
             </div>
           </div>
 
-          <div className="flex items-center flex-wrap gap-2.5 sm:gap-3 w-full xl:w-auto justify-between xl:justify-end">
-            {/* Stress Clock */}
-            <div className="flex items-center gap-2 bg-[#ff0055]/10 border border-[#ff0055] px-3 py-1.5 rounded-2xs shadow-[0_0_10px_rgba(255,0,85,0.15)]">
-              <span className="text-[10px] font-mono text-[#fca5a5] font-bold uppercase tracking-wider">
-                VENTANA CRÍTICA OODA:
-              </span>
-              <span className={`font-mono text-lg font-bold tracking-widest ${
-                isTimeExpired 
-                  ? 'text-[#ff0055] animate-bounce' 
-                  : remainingSeconds <= 45 
-                  ? 'text-[#ff0055] animate-pulse' 
-                  : 'text-[#ff0055]'
-              }`}>
-                {isTimeExpired ? '00:00 // AGOTADO' : formatTime(remainingSeconds)}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="font-mono text-xs text-[#00ff66] font-bold bg-[#00ff66]/10 px-3 py-1.5 rounded border border-[#00ff66]/30">
+              SISTEMA ACTIVO // XP ACUMULADO: <span className="text-white font-black">{globalXP}</span> / 100
             </div>
-
-            {/* Threat Level */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono text-[#64748b] uppercase hidden sm:inline">AMENAZA:</span>
-              {getThreatBadge()}
-            </div>
-
-            {/* Inyector de Incidente Híbrido */}
-            <button
-              type="button"
-              onClick={handleInjectHybridIncident}
-              className="px-3 py-1.5 bg-[#ff0055] hover:bg-[#dc2626] text-white font-mono text-xs font-bold rounded-2xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-red-500/30 shrink-0"
-              title="Acelera el reloj en -40s e inyecta ruido informático y desinformación en redes"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>+ Inyectar Incidente Híbrido (Ruido Sintético)</span>
-            </button>
-
-            {/* Botón de Contraste Metodológico */}
-            <button
-              type="button"
-              onClick={() => setShowContrastModal(!showContrastModal)}
-              className="px-3 py-1.5 bg-[#3b82f6]/20 hover:bg-[#3b82f6]/30 border border-[#3b82f6] text-[#60a5fa] font-mono text-xs font-bold rounded-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-              title="Abre el laboratorio comparativo entre el análisis aislado tradicional y la fusión ISR concéntrica"
-            >
-              <Scale className="w-3.5 h-3.5" />
-              <span>⚖️ Contrastar Metodología</span>
-            </button>
-
             {onClose && (
-              <button
-                type="button"
+              <button 
                 onClick={onClose}
-                aria-label="Cerrar simulación"
-                className="p-1.5 text-[#64748b] hover:text-white hover:bg-[#0f172a] border border-[#1e293b] rounded-2xs transition-colors cursor-pointer shrink-0"
+                className="text-slate-400 hover:text-white p-1.5 hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                title="Cerrar módulo"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -519,564 +311,738 @@ export function FaseOperativaDetalle({ onClose }: FaseOperativaDetalleProps) {
           </div>
         </header>
 
-        {/* BANNER DE CONTRASTE METODOLÓGICO DIDÁCTICO */}
-        {showContrastModal && (
-          <div className="bg-[#0b1329] border-b border-[#3b82f6]/40 p-3 sm:p-4 text-xs font-mono transition-all animate-fadeIn">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-[#3b82f6]/20 text-[#60a5fa] border border-[#3b82f6] rounded-2xs font-bold text-[11px]">
-                  LABORATORIO COMPARATIVO DE FUSIÓN ISR
-                </span>
-                <span className="text-white font-bold">
-                  Contraste Didáctico: Análisis Compartimentado (Falla Típica) vs. Fusión Multi-Sensor ISR + Sincronización Warden (CVIE)
-                </span>
-              </div>
+        {/* NAVIGATION WINDOW WORKFLOW */}
+        <nav className="flex bg-[#030510] border-b border-[#12254d] flex-wrap">
+          <button
+            onClick={() => setActiveTab(0)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-3 transition-all cursor-pointer ${
+              activeTab === 0
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/[0.02]'
+            }`}
+          >
+            <span>📡</span>
+            <span>1. Centro de Fusión ISR</span>
+          </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={applyFlawedConfirmationBiasPreset}
-                  className="px-2.5 py-1 bg-[#ff0055]/20 hover:bg-[#ff0055]/30 text-[#fca5a5] border border-[#ff0055] rounded-2xs transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <AlertTriangle className="w-3 h-3 text-[#ff0055]" />
-                  <span>Simular Sesgo de Confirmación / Falla Típica</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={applyOptimalFusionPreset}
-                  className="px-2.5 py-1 bg-[#10b981]/20 hover:bg-[#10b981]/30 text-[#a7f3d0] border border-[#10b981] rounded-2xs transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <ShieldCheck className="w-3 h-3 text-[#10b981]" />
-                  <span>Aplicar Fusión ISR y Sincronización Óptima</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowContrastModal(false)}
-                  className="p-1 text-[#64748b] hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+          <button
+            onClick={() => setActiveTab(1)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-3 transition-all cursor-pointer ${
+              activeTab === 1
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/[0.02]'
+            }`}
+          >
+            <span>🔬</span>
+            <span>2. El Método Gibson</span>
+          </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] font-sans">
-              <div className="p-2.5 bg-[#170a14] border border-[#ff0055]/30 rounded-2xs">
-                <div className="font-mono font-bold text-[#fca5a5] mb-1 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#ff0055]" />
-                  ANÁLISIS COMPARTIMENTADO (SESGO Y ENGAÑO TÁCTICO):
+          <button
+            onClick={() => setActiveTab(2)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-3 transition-all cursor-pointer ${
+              activeTab === 2
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/[0.02]'
+            }`}
+          >
+            <span>🛡️</span>
+            <span>3. Resguardo OPSEC de Campaña</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab(3)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-3 transition-all cursor-pointer ${
+              activeTab === 3
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/[0.02]'
+            }`}
+          >
+            <span>🎯</span>
+            <span>4. Red Team & Evaluación Final</span>
+          </button>
+        </nav>
+
+        {/* WINDOW 1: CENTRO DE FUSIÓN ISR */}
+        {activeTab === 0 && (
+          <div className="p-4 sm:p-6 min-h-[620px] transition-opacity duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 border-b border-[#12254d] pb-1.5 flex items-center gap-2">
+                    <Radio className="w-4 h-4 text-[#00ffff]" />
+                    <span>ALIMENTACIÓN MULTI-INT DE SENSORES EN TIEMPO REAL</span>
+                  </div>
+                  <p className="text-xs text-[#64748b] mb-3">
+                    Examine de manera sistemática los sensores tácticos disponibles en la frontera fluvial para resolver la discrepancia de las fuerzas hostiles.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    <button 
+                      onClick={() => setActiveSensor('osint')}
+                      className={`py-3 px-2 rounded font-mono text-xs transition-all cursor-pointer border text-center ${
+                        activeSensor === 'osint'
+                          ? 'bg-[#00ffff]/10 border-[#00ffff] text-[#00ffff] font-bold shadow-[0_0_12px_rgba(0,255,255,0.2)]'
+                          : 'bg-[#030612] border-[#12254d] text-[#64748b] hover:border-[#00ffff] hover:text-white'
+                      }`}
+                    >
+                      OSINT (Abierta)
+                    </button>
+                    <button 
+                      onClick={() => setActiveSensor('imint')}
+                      className={`py-3 px-2 rounded font-mono text-xs transition-all cursor-pointer border text-center ${
+                        activeSensor === 'imint'
+                          ? 'bg-[#00ffff]/10 border-[#00ffff] text-[#00ffff] font-bold shadow-[0_0_12px_rgba(0,255,255,0.2)]'
+                          : 'bg-[#030612] border-[#12254d] text-[#64748b] hover:border-[#00ffff] hover:text-white'
+                      }`}
+                    >
+                      IMINT / SAR (Satélite)
+                    </button>
+                    <button 
+                      onClick={() => setActiveSensor('sigint')}
+                      className={`py-3 px-2 rounded font-mono text-xs transition-all cursor-pointer border text-center ${
+                        activeSensor === 'sigint'
+                          ? 'bg-[#00ffff]/10 border-[#00ffff] text-[#00ffff] font-bold shadow-[0_0_12px_rgba(0,255,255,0.2)]'
+                          : 'bg-[#030612] border-[#12254d] text-[#64748b] hover:border-[#00ffff] hover:text-white'
+                      }`}
+                    >
+                      SIGINT (Señales)
+                    </button>
+                    <button 
+                      onClick={() => setActiveSensor('humint')}
+                      className={`py-3 px-2 rounded font-mono text-xs transition-all cursor-pointer border text-center ${
+                        activeSensor === 'humint'
+                          ? 'bg-[#00ffff]/10 border-[#00ffff] text-[#00ffff] font-bold shadow-[0_0_12px_rgba(0,255,255,0.2)]'
+                          : 'bg-[#030612] border-[#12254d] text-[#64748b] hover:border-[#00ffff] hover:text-white'
+                      }`}
+                    >
+                      HUMINT (Humana)
+                    </button>
+                  </div>
+
+                  <div className="bg-[#02040a] border border-dashed border-[#12254d] rounded-md p-4 min-h-[220px]">
+                    {activeSensor === 'osint' && (
+                      <div className="font-mono text-xs space-y-2">
+                        <span className="text-[#00ffff] font-bold block">[OSINT ALERTA DE FLUX / REDES DIGITALES]:</span>
+                        <div className="bg-white/[0.02] p-3 rounded text-slate-100 border-l-3 border-[#00ffff] leading-relaxed">
+                          <b>Viral en Red 'X' (Frontera Norte):</b> Cuentas extranjeras publican videos de alta resolución de un convoy de 40 tanques pesados movilizándose por la autopista del Sector Oeste. Pánico social en aumento.
+                        </div>
+                      </div>
+                    )}
+
+                    {activeSensor === 'imint' && (
+                      <div className="font-mono text-xs space-y-2">
+                        <span className="text-[#00ffff] font-bold block">[IMINT / SAR INTERCEPTACIÓN SATELITAL ACTIVA]:</span>
+                        <div className="bg-white/[0.02] p-3 rounded text-slate-100 border-l-3 border-[#ff0055] space-y-2.5 leading-relaxed">
+                          <div>
+                            <p className="text-[#ff0055] font-bold">Sector Oeste:</p>
+                            <p>Se verifica el relieve de las siluetas blindadas reportadas en OSINT. Sin embargo, el sensor térmico del satélite reporta: <b className="text-amber-400">LECTURA DE EMISIÓN DE CALOR: 0%</b> (Temperatura ambiente). Tanques estáticos lógicamente imposibles. <b className="text-red-400">[SEÑUELOS DE PLÁSTICO INFLABLES DETECTADOS]</b>.</p>
+                          </div>
+                          <div>
+                            <p className="text-[#00ff66] font-bold">Sector Este (Bosque Fluvial SCADA):</p>
+                            <p>El barrido de apertura sintética revela <b>múltiples firmas térmicas dinámicas dispersas</b> moviéndose de forma silenciosa entre el follaje hacia la subestación SCADA de bombeo de combustible. <b className="text-emerald-400">[DESPLIEGUE INFANTRÍA HOSTIL]</b>.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeSensor === 'sigint' && (
+                      <div className="font-mono text-xs space-y-2">
+                        <span className="text-[#00ffff] font-bold block">[SIGINT MONITOREO DE ESPECTRO EM]:</span>
+                        <div className="bg-white/[0.02] p-3 rounded text-slate-100 border-l-3 border-[#3b82f6] leading-relaxed">
+                          <b>Estación de Escucha:</b> Captura de ráfaga de datos militares cifrados de alta velocidad en la frecuencia de 435.2 MHz. Triangulación de antena localiza el transmisor de origen exactamente en el <b className="text-[#38bdf8]">Sector Este (Bosque Fluvial)</b>. Intenciones de comando remoto de malware SCADA inminente.
+                        </div>
+                      </div>
+                    )}
+
+                    {activeSensor === 'humint' && (
+                      <div className="font-mono text-xs space-y-2">
+                        <span className="text-[#00ffff] font-bold block">[HUMINT REPORTES DE TERRENO]:</span>
+                        <div className="bg-white/[0.02] p-3 rounded text-slate-100 border-l-3 border-[#ffaa00] space-y-2 leading-relaxed">
+                          <p><b>Reporte Informante Local (Sector Oeste):</b> Agricultores de la frontera observaron a ingenieros hostiles armando y desarmando grandes globos de plástico verde de forma cilíndrica.</p>
+                          <p><b>Reporte Patrulla 4 (Sector Este):</b> Patrulla de reconocimiento fluvial reporta cercados perimetrales saboteados y cables de telecomunicación cortados cerca de la subestación SCADA de bombeo de combustible.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[#cbd5e1] leading-relaxed">
-                  El analista examina de forma aislada las redes sociales (OSINT), asume como real el convoy de blindados en el Sector Oeste y ordena fuego de artillería masivo. No activa el radar satelital SAR ni contrasta la falta de calor en los señuelos. Mientras tanto, la red SCADA del Este sufre una intrusión cibernética inadvertida. <strong>Resultado:</strong> Desperdicio de munición sobre maquetas plásticas y colapso de la infraestructura crítica nacional.
-                </p>
+
+                {/* Situation Map Mockup */}
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 border-b border-[#12254d] pb-1.5 flex items-center gap-2">
+                    <Radar className="w-4 h-4 text-[#00ffff]" />
+                    <span>CARTA DE SITUACIÓN EN TIEMPO REAL</span>
+                  </div>
+                  <div className="w-full h-48 bg-[radial-gradient(circle,#0c1c3f_10%,#02040a_90%)] border border-[#12254d] rounded relative overflow-hidden">
+                    <div className="radar-line-anim" />
+                    <div className="absolute top-[30%] left-[20%] w-2.5 h-2.5 rounded-full bg-[#ff0055] shadow-[0_0_10px_#ff0055] blip-pulse-red" />
+                    <div className="absolute top-[70%] left-[75%] w-2.5 h-2.5 rounded-full bg-[#ffaa00] shadow-[0_0_10px_#ffaa00] blip-pulse-amber" />
+                    <span className="absolute top-3 left-3 text-[11px] font-mono text-[#ff0055] bg-black/60 px-2 py-0.5 rounded border border-[#ff0055]/40">
+                      Sector Oeste: Blindados Visibles
+                    </span>
+                    <span className="absolute bottom-3 right-3 text-[11px] font-mono text-[#ffaa00] bg-black/60 px-2 py-0.5 rounded border border-[#ffaa00]/40">
+                      Sector Este: Área Forestal SCADA
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-2.5 bg-[#071915] border border-[#10b981]/30 rounded-2xs">
-                <div className="font-mono font-bold text-[#a7f3d0] mb-1 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-                  FUSIÓN MULTI-SENSOR ISR + TEORÍA DE WARDEN (CVIE):
+              {/* Right Sidebar */}
+              <div className="space-y-4">
+                <div className="bg-[#ff0055]/10 border border-[#ff0055] p-3.5 rounded-md text-center">
+                  <div className="text-[11px] font-mono text-[#cbd5e1] mb-1">VENTANA CRÍTICA DE PLANIFICACIÓN:</div>
+                  <div className="font-mono text-3xl font-bold text-[#ff0055] tracking-wider">
+                    {formatTime(timers.w1)}
+                  </div>
                 </div>
-                <p className="text-[#cbd5e1] leading-relaxed">
-                  Superposición inmediata de capas: El radar satelital SAR revela que los vehículos del Oeste carecen de motor térmico (señuelos inflables). La señal SIGINT alerta de un ciberataque simultáneo en el Este. El mando responde con reconocimiento UAV de bajo costo en el Oeste y aísla físicamente (Air-Gap) los elementos esenciales SCADA (Anillo 2) en el Este. <strong>Resultado:</strong> Decepción adversaria neutralizada y resiliencia estratégica garantizada.
-                </p>
+
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 border-b border-[#12254d] pb-1.5">
+                    REQUERIMIENTOS
+                  </div>
+                  <p className="text-xs text-[#cbd5e1] leading-relaxed">
+                    De acuerdo con Richards Heuer, la inteligencia no debe anclarse en la evidencia visual inicial. OSINT presenta alta vulnerabilidad a campañas de desinformación. El análisis de imágenes de radar satelital (IMINT/SAR) es imperativo para validar firmas térmicas reales.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 2. GRID WORKSPACE (3 COLUMNAS TÁCTICAS) */}
-        <div className="relative z-10 flex-1 overflow-y-auto grid grid-cols-1 xl:grid-cols-12 min-h-[640px] bg-[#040711]">
-          
-          {/* ========================================================================= */}
-          {/* COLUMNA 1: CONSOLA DE CAPAS DE SENSORES ISR (3.2/12)                       */}
-          {/* ========================================================================= */}
-          <section className="xl:col-span-3 border-b xl:border-b-0 xl:border-r border-[#1e293b] flex flex-col bg-[#090f1f]">
-            <div className="px-4 py-3 bg-[#070d1a] border-b border-[#1e293b] flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#00ffff] flex items-center gap-1.5 uppercase tracking-wider">
-                <Radar className="w-3.5 h-3.5 text-[#00ffff]" />
-                CAPAS DE SENSORES ISR
-              </span>
-              <span className="font-mono text-[10px] px-2 py-0.5 bg-[#0f172a] text-[#64748b] border border-[#1e293b] rounded-2xs font-semibold">
-                {activeSensorCount} DE 4 ACTIVOS
-              </span>
-            </div>
+        {/* WINDOW 2: EL MÉTODO GIBSON (7 PASOS) */}
+        {activeTab === 1 && (
+          <div className="p-4 sm:p-6 min-h-[620px] transition-opacity duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-2 border-b border-[#12254d] pb-1.5">
+                    MATRIZ GIBSON - FASE 3: CALIFICACIÓN DE SENSORES
+                  </div>
+                  <p className="text-xs text-[#64748b] mb-4">
+                    Aplique rigor científico. Califique de forma institucional la fiabilidad y exactitud de las fuentes analizadas en el Centro de Fusión:
+                  </p>
 
-            <div className="p-3 sm:p-4 overflow-y-auto space-y-3.5 flex-1">
-              <p className="text-[11px] text-[#64748b] leading-relaxed">
-                Habilite las capas de colección. La superposición de datos revela discrepancias térmicas o de radio que exponen la decepción táctica hostil.
-              </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-xs border border-[#12254d]">
+                      <thead>
+                        <tr className="bg-[#030611] text-[#00ffff] font-mono border-b border-[#12254d]">
+                          <th className="p-2.5 text-left border-r border-[#12254d]">Fuente / Sensor</th>
+                          <th className="p-2.5 text-center border-r border-[#12254d]">Confiabilidad de la Fuente (A-F)</th>
+                          <th className="p-2.5 text-center border-r border-[#12254d]">Exactitud del Dato (1-6)</th>
+                          <th className="p-2.5 text-center">Valor Metodológico</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#12254d]">
+                        {/* OSINT Row */}
+                        <tr className="bg-[#02040b]">
+                          <td className="p-2.5 font-semibold text-slate-200 border-r border-[#12254d]">
+                            OSINT (Video de Blindados en Oeste)
+                          </td>
+                          <td className="p-2 border-r border-[#12254d]">
+                            <select 
+                              value={gibConf1}
+                              onChange={(e) => setGibConf1(e.target.value)}
+                              className="w-full bg-[#02040a] text-white border border-[#12254d] rounded p-1.5 text-xs focus:border-[#00ffff] outline-none"
+                            >
+                              <option value="none">-- Seleccionar --</option>
+                              <option value="A">Confiabilidad A (Excelente)</option>
+                              <option value="F">Confiabilidad F (Improbable / No calificado)</option>
+                            </select>
+                          </td>
+                          <td className="p-2 border-r border-[#12254d]">
+                            <select 
+                              value={gibEx1}
+                              onChange={(e) => setGibEx1(e.target.value)}
+                              className="w-full bg-[#02040a] text-white border border-[#12254d] rounded p-1.5 text-xs focus:border-[#00ffff] outline-none"
+                            >
+                              <option value="none">-- Seleccionar --</option>
+                              <option value="1">1 (Confirmado por otras fuentes)</option>
+                              <option value="5">5 (Dudoso / No corroborado)</option>
+                            </select>
+                          </td>
+                          <td className="p-2.5 text-center font-bold font-mono">
+                            {isOsintCorrect ? (
+                              <span className="text-[#00ff66]">Correcto (F-5)</span>
+                            ) : (
+                              <span className="text-slate-500">Pendiente</span>
+                            )}
+                          </td>
+                        </tr>
 
-              {/* Sensor Toggles */}
-              <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xs p-3 space-y-2">
-                {/* SIGINT */}
-                <button
-                  type="button"
-                  onClick={() => handleToggleSensor('sigint')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-2xs border font-mono text-xs transition-all cursor-pointer ${
-                    activeSensors.sigint
-                      ? 'bg-[#00ffff]/10 border-[#00ffff] text-white shadow-[0_0_10px_rgba(0,255,255,0.15)]'
-                      : 'bg-[#070c16] border-[#1e293b] text-[#94a3b8] hover:border-[#3b82f6]'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Radio className={`w-3.5 h-3.5 ${activeSensors.sigint ? 'text-[#00ffff]' : 'text-[#64748b]'}`} />
-                    <span>📻 SIGINT (Emisiones VHF/HF)</span>
-                  </span>
-                  <div className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    activeSensors.sigint ? 'bg-[#00ffff] shadow-[0_0_8px_#00ffff]' : 'bg-[#64748b]'
-                  }`} />
-                </button>
+                        {/* IMINT/SAR Row */}
+                        <tr className="bg-[#02040b]">
+                          <td className="p-2.5 font-semibold text-slate-200 border-r border-[#12254d]">
+                            IMINT/SAR (Firma Térmica Cero)
+                          </td>
+                          <td className="p-2 border-r border-[#12254d]">
+                            <select 
+                              value={gibConf2}
+                              onChange={(e) => setGibConf2(e.target.value)}
+                              className="w-full bg-[#02040a] text-white border border-[#12254d] rounded p-1.5 text-xs focus:border-[#00ffff] outline-none"
+                            >
+                              <option value="none">-- Seleccionar --</option>
+                              <option value="A">Confiabilidad A (Total Fiabilidad Técnica)</option>
+                              <option value="E">Confiabilidad E (No Fiable)</option>
+                            </select>
+                          </td>
+                          <td className="p-2 border-r border-[#12254d]">
+                            <select 
+                              value={gibEx2}
+                              onChange={(e) => setGibEx2(e.target.value)}
+                              className="w-full bg-[#02040a] text-white border border-[#12254d] rounded p-1.5 text-xs focus:border-[#00ffff] outline-none"
+                            >
+                              <option value="none">-- Seleccionar --</option>
+                              <option value="1">1 (Veracidad física absoluta)</option>
+                              <option value="6">6 (Sin base para juzgar)</option>
+                            </select>
+                          </td>
+                          <td className="p-2.5 text-center font-bold font-mono">
+                            {isImintCorrect ? (
+                              <span className="text-[#00ff66]">Correcto (A-1)</span>
+                            ) : (
+                              <span className="text-slate-500">Pendiente</span>
+                            )}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-                {/* IMINT/SAR */}
-                <button
-                  type="button"
-                  onClick={() => handleToggleSensor('imint')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-2xs border font-mono text-xs transition-all cursor-pointer ${
-                    activeSensors.imint
-                      ? 'bg-[#00ffff]/10 border-[#00ffff] text-white shadow-[0_0_10px_rgba(0,255,255,0.15)]'
-                      : 'bg-[#070c16] border-[#1e293b] text-[#94a3b8] hover:border-[#3b82f6]'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Satellite className={`w-3.5 h-3.5 ${activeSensors.imint ? 'text-[#00ffff]' : 'text-[#64748b]'}`} />
-                    <span>📡 IMINT/SAR (Radar Satelital)</span>
-                  </span>
-                  <div className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    activeSensors.imint ? 'bg-[#00ffff] shadow-[0_0_8px_#00ffff]' : 'bg-[#64748b]'
-                  }`} />
-                </button>
-
-                {/* OSINT */}
-                <button
-                  type="button"
-                  onClick={() => handleToggleSensor('osint')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-2xs border font-mono text-xs transition-all cursor-pointer ${
-                    activeSensors.osint
-                      ? 'bg-[#00ffff]/10 border-[#00ffff] text-white shadow-[0_0_10px_rgba(0,255,255,0.15)]'
-                      : 'bg-[#070c16] border-[#1e293b] text-[#94a3b8] hover:border-[#3b82f6]'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Globe className={`w-3.5 h-3.5 ${activeSensors.osint ? 'text-[#00ffff]' : 'text-[#64748b]'}`} />
-                    <span>🌐 OSINT (Medios Sintéticos/Redes)</span>
-                  </span>
-                  <div className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    activeSensors.osint ? 'bg-[#00ffff] shadow-[0_0_8px_#00ffff]' : 'bg-[#64748b]'
-                  }`} />
-                </button>
-
-                {/* HUMINT */}
-                <button
-                  type="button"
-                  onClick={() => handleToggleSensor('humint')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-2xs border font-mono text-xs transition-all cursor-pointer ${
-                    activeSensors.humint
-                      ? 'bg-[#00ffff]/10 border-[#00ffff] text-white shadow-[0_0_10px_rgba(0,255,255,0.15)]'
-                      : 'bg-[#070c16] border-[#1e293b] text-[#94a3b8] hover:border-[#3b82f6]'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Users className={`w-3.5 h-3.5 ${activeSensors.humint ? 'text-[#00ffff]' : 'text-[#64748b]'}`} />
-                    <span>👤 HUMINT (Informantes Terreno)</span>
-                  </span>
-                  <div className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    activeSensors.humint ? 'bg-[#00ffff] shadow-[0_0_8px_#00ffff]' : 'bg-[#64748b]'
-                  }`} />
-                </button>
+                {/* ACH Dynamic Section */}
+                <div className="bg-[#091228] border border-[#12254d] rounded-md p-4">
+                  <div className="font-mono text-xs text-[#00ffff] mb-1 font-bold">
+                    FASE 4 Y 5: INTERPRETACIÓN DE DISCREPANCIAS (ACH)
+                  </div>
+                  {gibsonValidated ? (
+                    <div>
+                      <p className="text-xs text-[#00ff66] leading-relaxed mb-3">
+                        <b>Fase 3 Validada con Éxito.</b> Ha registrado la procedencia metodológica de forma impecable. Habilitando la Fase 4 y 5 de Heuer ACH en tiempo real para resolver el teatro de operaciones.
+                      </p>
+                      <div className="mt-3 border-t border-[#12254d] pt-3">
+                        <p className="text-xs text-[#ffaa00] mb-3 leading-relaxed">
+                          <b>Resultado ACH:</b> Las firmas térmicas del satélite SAR confirman que el convoy del Oeste no emite calor (señuelos). El verdadero esfuerzo de penetración asimétrica es en el Este.
+                        </p>
+                        <button 
+                          onClick={handleSaveGibsonXP}
+                          disabled={gibsonXPClaimed}
+                          className={`px-4 py-2 rounded text-xs font-bold font-mono transition-colors cursor-pointer flex items-center gap-2 ${
+                            gibsonXPClaimed
+                              ? 'bg-[#00ff66]/20 text-[#00ff66] border border-[#00ff66]/40 cursor-default'
+                              : 'bg-[#00ff66] hover:bg-[#00e65a] text-[#02040a]'
+                          }`}
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>{gibsonXPClaimed ? 'Conclusiones Gibson Validadas (+30 XP)' : 'Validar Conclusiones de Gibson (+30 XP)'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-slate-400">
+                      Complete la calificación de la Fase 3 de Gibson para habilitar Heuer ACH.
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Ingesta de Reportes Recientes */}
-              <div className="space-y-2.5">
-                <div className="p-3 bg-[#0f172a] border border-[#1e293b] rounded-2xs text-xs">
-                  <strong className="text-[#c084fc] font-mono text-[11px] block mb-1 uppercase tracking-wider">
-                    REPORTE INICIAL:
-                  </strong>
-                  <p className="text-[#cbd5e1] leading-relaxed text-[11px]">
-                    Múltiples cuentas abiertas de redes difunden videos de convoyes blindados avanzando masivamente por el sector Oeste.
+              {/* Right Sidebar */}
+              <div className="space-y-4">
+                <div className="bg-[#ff0055]/10 border border-[#ff0055] p-3.5 rounded-md text-center">
+                  <div className="text-[11px] font-mono text-[#cbd5e1] mb-1">TIEMPO GIBSON DISPONIBLE:</div>
+                  <div className="font-mono text-3xl font-bold text-[#ff0055] tracking-wider">
+                    {formatTime(timers.w2)}
+                  </div>
+                </div>
+
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 border-b border-[#12254d] pb-1.5">
+                    MÉTODO CIENTÍFICO
+                  </div>
+                  <p className="text-xs text-[#64748b] leading-relaxed">
+                    El Método Gibson exige registrar metódicamente la procedencia y calidad del dato (Fase 3: Reunión), para luego compararlo físicamente y aplicar la falsación heurística (Fase 4: Interpretación).
                   </p>
                 </div>
-
-                {/* Alerta de Seguridad OPSEC Interceptada */}
-                {showOpsecAlert && (
-                  <div className="p-3 bg-[#ff0055]/10 border border-[#ff0055] rounded-2xs text-xs shadow-[0_0_12px_rgba(255,0,85,0.2)] animate-pulse">
-                    <strong className="text-[#ff0055] font-mono text-[11px] block mb-1 uppercase tracking-wider flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-[#ff0055]" />
-                      ALERTA DE SEGURIDAD OPSEC:
-                    </strong>
-                    <p className="text-[#fca5a5] leading-relaxed text-[11px] mb-2">
-                      Se ha interceptado una imagen de nuestra artillería con metadatos de geolocalización GPS expuestos. Riesgo inminente de contragolpe de fuego hostil.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleSanitizeOpsecGeo}
-                      disabled={opsecSanitized}
-                      className="w-full py-1.5 px-2 bg-[#ff0055] hover:bg-[#dc2626] text-white font-mono text-[11px] font-bold rounded-2xs transition-all cursor-pointer flex items-center justify-center gap-1 shadow-md"
-                    >
-                      <EyeOff className="w-3.5 h-3.5" />
-                      <span>Sanitizar Metadatos GPS EXIF</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
-          </section>
+          </div>
+        )}
 
-          {/* ========================================================================= */}
-          {/* COLUMNA 2: TACTICAL MAP DISPLAY & SYNC MATRIX (5.5/12)                    */}
-          {/* ========================================================================= */}
-          <section className="xl:col-span-6 border-b xl:border-b-0 xl:border-r border-[#1e293b] flex flex-col bg-[#090e1a]">
-            <div className="px-4 py-3 bg-[#070d1a] border-b border-[#1e293b] flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#00ffff] flex items-center gap-1.5 uppercase tracking-wider">
-                <Compass className="w-3.5 h-3.5 text-[#00ffff]" />
-                MAPA DE SITUACIÓN Y FUSIÓN GEOCLICAL
-              </span>
-              <span className="font-mono text-[10px] text-[#10b981] font-bold">
-                SITUACIÓN GEOGRÁFICA
-              </span>
-            </div>
+        {/* WINDOW 3: RESGUARDO OPSEC DE CAMPAÑA */}
+        {activeTab === 2 && (
+          <div className="p-4 sm:p-6 min-h-[620px] transition-opacity duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-2 border-b border-[#12254d] pb-1.5">
+                    PROTOCOLOS DE CONTRA-INTERCEPTACIÓN ACTIVA
+                  </div>
+                  <p className="text-xs text-[#64748b] mb-4">
+                    El adversario dispone de interceptación SIGINT de gran capacidad. Debe ejecutar de forma urgente los resguardos OPSEC para proteger las posiciones del Ejército de Bolivia.
+                  </p>
 
-            <div className="p-3 sm:p-4 overflow-y-auto space-y-4 flex-1 flex flex-col justify-between">
-              
-              {/* Tactical Map Display */}
-              <div className="bg-[#03060f] border border-[#1e293b] rounded-2xs p-3 flex flex-col items-center shadow-inner relative">
-                <div 
-                  id="tactical-map"
-                  className="w-full h-72 sm:h-80 bg-[radial-gradient(circle,#0e172e_10%,#03060f_100%)] border border-[#1e293b] rounded-2xs relative overflow-hidden flex justify-center items-center select-none"
-                >
-                  {/* Grid Lines Overlay */}
-                  <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      backgroundImage: `
-                        linear-gradient(to right, rgba(30, 41, 59, 0.4) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(30, 41, 59, 0.4) 1px, transparent 1px)
-                      `,
-                      backgroundSize: '40px 40px'
-                    }}
-                  />
+                  <div className="flex items-center gap-3 bg-[#ffaa00]/10 border border-[#ffaa00] p-3 rounded mb-4">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                      <strong className="text-[#ffaa00] text-xs sm:text-sm block">EXPOSICIÓN DE FRECUENCIAS DEL COMANDO</strong>
+                      <p className="text-xs text-[#64748b]">
+                        Las emisiones electromagnéticas tácticas están al 95%. Alto riesgo de geolocalización.
+                      </p>
+                    </div>
+                  </div>
 
-                  {/* Concentric Radar Distance Rings */}
-                  <div className="absolute w-64 h-64 rounded-full border border-[#1e293b]/50 pointer-events-none" />
-                  <div className="absolute w-44 h-44 rounded-full border border-[#1e293b]/40 pointer-events-none" />
-                  <div className="absolute w-24 h-24 rounded-full border border-[#1e293b]/30 pointer-events-none" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* EMCON Control */}
+                    <div className="bg-white/[0.01] border border-[#12254d] rounded p-4 text-center">
+                      <h4 className="text-xs font-bold text-white mb-2">Control de Emisiones (EMCON)</h4>
+                      <button 
+                        onClick={handleToggleEmcon}
+                        className={`w-full py-2.5 px-3 rounded text-xs font-bold font-mono transition-colors cursor-pointer ${
+                          emconActive
+                            ? 'bg-[#00ff66] hover:bg-[#00e65a] text-[#02040a]'
+                            : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white'
+                        }`}
+                      >
+                        {emconActive ? 'Desactivar EMCON' : 'Iniciar Silencio EMCON'}
+                      </button>
+                      <p className={`text-[11px] mt-2 font-mono ${emconActive ? 'text-[#00ff66]' : 'text-[#64748b]'}`}>
+                        {emconActive ? 'Estado: SILENCIO EMCON ACTIVO // Triangulación Hostil Bloqueada' : 'Estado: Emisión Continua'}
+                      </p>
+                    </div>
 
-                  {/* Map Sectors / Labels */}
-                  <span className="absolute top-3 left-4 font-mono text-[10px] font-bold text-[#64748b] bg-[#03060f]/80 px-1.5 py-0.5 rounded-2xs border border-[#1e293b]">
-                    SECTOR NORTE (A1: C4ISR)
-                  </span>
-                  <span className="absolute bottom-3 left-4 font-mono text-[10px] font-bold text-[#64748b] bg-[#03060f]/80 px-1.5 py-0.5 rounded-2xs border border-[#1e293b]">
-                    SECTOR FRONTERA OESTE (A2)
-                  </span>
-                  <span className="absolute bottom-3 right-4 font-mono text-[10px] font-bold text-[#64748b] bg-[#03060f]/80 px-1.5 py-0.5 rounded-2xs border border-[#1e293b]">
-                    SECTOR FRONTERA ESTE (A3)
-                  </span>
-
-                  {/* Dynamic Sensor Targets on Map */}
-                  {/* Marker E1 (OSINT Convoy Visible, Purple) */}
-                  {activeSensors.osint && (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkerClick('osint')}
-                      className="absolute bottom-16 left-20 w-4 h-4 rounded-full bg-[#c084fc] flex items-center justify-center cursor-pointer group"
-                      title="E1: Convoyes blindados reportados en OSINT (Click para ver telemetría)"
-                    >
-                      <span className="absolute inset-0 rounded-full bg-[#c084fc] animate-ping opacity-60 pointer-events-none" />
-                      <span className="text-[9px] font-mono font-bold text-black group-hover:scale-125 transition-transform">
-                        E1
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Marker E3 (IMINT SAR Inflable Señuelo, Cyan) */}
-                  {activeSensors.imint && (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkerClick('imint')}
-                      className="absolute bottom-20 left-28 w-4 h-4 rounded-full bg-[#00ffff] flex items-center justify-center cursor-pointer group"
-                      title="E3: Radar SAR satelital - Firma térmica fría (Click para ver telemetría)"
-                    >
-                      <span className="absolute inset-0 rounded-full bg-[#00ffff] animate-ping opacity-60 pointer-events-none" />
-                      <span className="text-[9px] font-mono font-bold text-black group-hover:scale-125 transition-transform">
-                        E3
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Marker E2 (SIGINT/Ciberataque en el Este, Blue) */}
-                  {activeSensors.sigint && (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkerClick('sigint')}
-                      className="absolute bottom-20 right-24 w-4 h-4 rounded-full bg-[#3b82f6] flex items-center justify-center cursor-pointer group"
-                      title="E2: SIGINT - Ciberataque en subestación eléctrica (Click para ver telemetría)"
-                    >
-                      <span className="absolute inset-0 rounded-full bg-[#3b82f6] animate-ping opacity-60 pointer-events-none" />
-                      <span className="text-[9px] font-mono font-bold text-white group-hover:scale-125 transition-transform">
-                        E2
-                      </span>
-                    </button>
-                  )}
+                    {/* GEOINT Sanitization */}
+                    <div className="bg-white/[0.01] border border-[#12254d] rounded p-4 text-center">
+                      <h4 className="text-xs font-bold text-white mb-2">Sanitización de Imágenes GEOINT</h4>
+                      <button 
+                        onClick={handleSanitizeGeoint}
+                        disabled={geointSanitized}
+                        className={`w-full py-2.5 px-3 rounded text-xs font-bold font-mono transition-colors cursor-pointer ${
+                          geointSanitized
+                            ? 'bg-[#00ff66] text-[#02040a] cursor-default'
+                            : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white'
+                        }`}
+                      >
+                        {geointSanitized ? 'GEOINT Sanitizado' : 'Sanitizar Metadatos GPS EXIF'}
+                      </button>
+                      <p className={`text-[11px] mt-2 font-mono ${geointSanitized ? 'text-[#00ff66]' : 'text-[#64748b]'}`}>
+                        {geointSanitized ? 'Estado: Metadatos EXIF limpios' : 'Estado: Archivos Expuestos'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Telemetry Bar */}
-                <div 
-                  id="map-telemetry"
-                  className="w-full mt-2.5 p-2 bg-[#060c18] border border-[#1e293b] rounded-2xs font-mono text-[11px] text-[#94a3b8] text-center"
-                >
-                  {mapTelemetry}
+                {/* Protection Status */}
+                <div className="bg-[#091228] border border-[#12254d] rounded-md p-4">
+                  <div className="font-mono text-xs text-[#00ffff] mb-1 font-bold">
+                    COEFICIENTE DE PROTECCIÓN ELECTROMAGNÉTICA:
+                  </div>
+                  <p className={`text-sm font-bold ${
+                    emconActive && geointSanitized
+                      ? 'text-[#00ff66]'
+                      : emconActive || geointSanitized
+                        ? 'text-[#ffaa00]'
+                        : 'text-[#ff0055]'
+                  }`}>
+                    {emconActive && geointSanitized
+                      ? 'SEGURO // Resguardo OPSEC de Campaña al 100%'
+                      : emconActive || geointSanitized
+                        ? 'Parcial // Vulnerabilidades OPSEC persistentes'
+                        : 'Inseguro // Exposición Crítica'}
+                  </p>
                 </div>
               </div>
 
-              {/* Matriz de Sincronización Operativa (Fuegos y Colección) */}
-              <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xs p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-mono font-bold text-white flex items-center gap-1.5 uppercase">
-                    <Crosshair className="w-3.5 h-3.5 text-[#00ffff]" />
-                    MATRIZ DE ASIGNACIÓN Y SINCRONIZACIÓN MULTIDOMINIO
-                  </h3>
-                  {isSyncSuccess && (
-                    <span className="px-2 py-0.5 bg-[#10b981]/20 border border-[#10b981] text-[#10b981] font-mono text-[10px] font-bold rounded-2xs">
-                      ✓ SINCRONIZADA
-                    </span>
-                  )}
+              {/* Right Sidebar */}
+              <div className="space-y-4">
+                <div className="bg-[#ff0055]/10 border border-[#ff0055] p-3.5 rounded-md text-center">
+                  <div className="text-[11px] font-mono text-[#cbd5e1] mb-1">TIEMPO DE BLINDAJE TÁCTICO:</div>
+                  <div className="font-mono text-3xl font-bold text-[#ff0055] tracking-wider">
+                    {formatTime(timers.w3)}
+                  </div>
                 </div>
 
-                <p className="text-[11px] text-[#64748b]">
-                  Asigne de manera sincronizada la respuesta defensiva sobre el terreno según la prioridad de los Cinco Anillos de Warden.
-                </p>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse font-mono">
-                    <thead>
-                      <tr className="border-b border-[#1e293b] text-[#00ffff] text-[10px]">
-                        <th className="py-1.5 px-2 font-semibold">SECTOR</th>
-                        <th className="py-1.5 px-2 font-semibold">ANILLO WARDEN AMENAZADO</th>
-                        <th className="py-1.5 px-2 font-semibold">MANO DE RESPUESTA SINCRONIZADA</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1e293b] text-[11px]">
-                      {/* Sector Oeste */}
-                      <tr>
-                        <td className="py-2 px-2 text-white font-bold">
-                          Oeste (A2)
-                        </td>
-                        <td className="py-2 px-2">
-                          <select
-                            id="sync-r-oeste"
-                            value={syncMatrix.rOeste}
-                            onChange={(e) => handleMatrixChange('rOeste', e.target.value)}
-                            className="w-full bg-[#030610] border border-[#1e293b] rounded-2xs px-2 py-1 text-white text-[11px] focus:outline-none focus:border-[#00ffff]"
-                          >
-                            <option value="none">-- Seleccionar --</option>
-                            <option value="anillo1">Anillo 1: Mando C4ISR</option>
-                            <option value="anillo2">Anillo 2: Combustible/SCADA</option>
-                            <option value="anillo3">Anillo 3: Infraestructura</option>
-                          </select>
-                        </td>
-                        <td className="py-2 px-2">
-                          <select
-                            id="sync-a-oeste"
-                            value={syncMatrix.aOeste}
-                            onChange={(e) => handleMatrixChange('aOeste', e.target.value)}
-                            className="w-full bg-[#030610] border border-[#1e293b] rounded-2xs px-2 py-1 text-white text-[11px] focus:outline-none focus:border-[#00ffff]"
-                          >
-                            <option value="none">-- Seleccionar --</option>
-                            <option value="fuegos">Contragolpe de Fuego (Artillería)</option>
-                            <option value="decepcion">Falsa Retirada / Engaño Propio</option>
-                            <option value="vuelo">Vuelo de Reconocimiento UAV</option>
-                          </select>
-                        </td>
-                      </tr>
-
-                      {/* Sector Este */}
-                      <tr>
-                        <td className="py-2 px-2 text-white font-bold">
-                          Este (A3)
-                        </td>
-                        <td className="py-2 px-2">
-                          <select
-                            id="sync-r-este"
-                            value={syncMatrix.rEste}
-                            onChange={(e) => handleMatrixChange('rEste', e.target.value)}
-                            className="w-full bg-[#030610] border border-[#1e293b] rounded-2xs px-2 py-1 text-white text-[11px] focus:outline-none focus:border-[#00ffff]"
-                          >
-                            <option value="none">-- Seleccionar --</option>
-                            <option value="anillo1">Anillo 1: Mando C4ISR</option>
-                            <option value="anillo2">Anillo 2: Combustible/SCADA</option>
-                            <option value="anillo3">Anillo 3: Infraestructura</option>
-                          </select>
-                        </td>
-                        <td className="py-2 px-2">
-                          <select
-                            id="sync-a-este"
-                            value={syncMatrix.aEste}
-                            onChange={(e) => handleMatrixChange('aEste', e.target.value)}
-                            className="w-full bg-[#030610] border border-[#1e293b] rounded-2xs px-2 py-1 text-white text-[11px] focus:outline-none focus:border-[#00ffff]"
-                          >
-                            <option value="none">-- Seleccionar --</option>
-                            <option value="airgap">Silos Físicos / Air-Gap Ciberdefensa</option>
-                            <option value="fuegos">Masa de Reserva Blindada</option>
-                            <option value="opsec">Rotación de Espectro VHF</option>
-                          </select>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 border-b border-[#12254d] pb-1.5">
+                    MEDIDAS OPSEC
+                  </div>
+                  <p className="text-xs text-[#64748b] leading-relaxed">
+                    La negligencia en la sanitización lógica de coordenadas GPS permite que el oponente asimétrico dirija fuegos de precisión devastadores. El silencio de transmisiones EMCON protege el Poder Militar nacional.
+                  </p>
                 </div>
               </div>
-
             </div>
-          </section>
+          </div>
+        )}
 
-          {/* ========================================================================= */}
-          {/* COLUMNA 3: COGNITIVE RADAR & CHATBOT EVALUADOR ADAPTATIVO (3.3/12)         */}
-          {/* ========================================================================= */}
-          <section className="xl:col-span-3 border-b xl:border-b-0 flex flex-col bg-[#090f1f]">
-            <div className="px-4 py-3 bg-[#070d1a] border-b border-[#1e293b] flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#00ffff] flex items-center gap-1.5 uppercase tracking-wider">
-                <Activity className="w-3.5 h-3.5 text-[#00ffff]" />
-                RADAR COGNITIVO & ADVISOR L.I.S.A.
-              </span>
-              <span className="font-mono text-[10px] text-[#10b981] font-bold">
-                MONITOR EN LÍNEA
-              </span>
+        {/* WINDOW 4: EVALUACIÓN SUMATIVA CON LISA (RED TEAM) */}
+        {activeTab === 3 && (
+          <div className="p-4 sm:p-6 min-h-[620px] transition-opacity duration-300">
+            <div className="mb-4">
+              <h2 className="text-base sm:text-lg font-bold text-white">
+                Resiliencia y Evaluación Sumativa Final por Competencias
+              </h2>
+              <p className="text-xs text-[#64748b]">
+                Defienda sus decisiones analíticas basadas en el Poder Militar y la metodología oficial de la ECEME frente al Red Team.
+              </p>
             </div>
 
-            <div className="p-3 sm:p-4 overflow-y-auto space-y-3.5 flex-1 flex flex-col">
-              
-              {/* Radar Metrics Panel */}
-              <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xs p-3 space-y-2.5 shadow-md">
-                <div className="flex items-center justify-between text-[11px] font-mono font-bold text-white uppercase border-b border-[#1e293b] pb-1.5">
-                  <span>ALERTAS DE SESGOS Y EXPOSICIÓN OPSEC</span>
-                  <span className="text-[10px] text-[#00ffff]">COGNITIVE LOG</span>
-                </div>
-
-                {/* Sesgo de Confirmación */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-[#64748b]">Sesgo de Confirmación</span>
-                    <span className={`font-bold ${metrics.confirmacion >= 50 ? 'text-[#ff0055]' : 'text-[#10b981]'}`}>
-                      {metrics.confirmacion >= 50 ? 'Alto' : 'Bajo'} ({metrics.confirmacion}%)
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              {/* Left Column: Chat Box */}
+              <div className="flex flex-col h-[450px] bg-[#02040b] border border-[#12254d] rounded-md overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {chatMessages.map((msg) => (
                     <div
-                      className={`h-full transition-all duration-500 ${
-                        metrics.confirmacion >= 50 ? 'bg-[#ff0055]' : 'bg-[#10b981]'
-                      }`}
-                      style={{ width: `${metrics.confirmacion}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Vulnerabilidad a Decepción */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-[#64748b]">Vulnerabilidad a Decepción</span>
-                    <span className={`font-bold ${metrics.decepcion >= 50 ? 'text-[#ff0055]' : 'text-[#10b981]'}`}>
-                      {metrics.decepcion >= 50 ? 'Crítica' : 'Baja'} ({metrics.decepcion}%)
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${
-                        metrics.decepcion >= 50 ? 'bg-[#ff0055]' : 'bg-[#10b981]'
-                      }`}
-                      style={{ width: `${metrics.decepcion}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Resiliencia OPSEC */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-[#64748b]">Resiliencia de Contrainteligencia</span>
-                    <span className={`font-bold ${metrics.resiliencia >= 80 ? 'text-[#10b981]' : 'text-[#f59e0b]'}`}>
-                      {metrics.resiliencia >= 80 ? 'Excelente' : 'Insuficiente'} ({metrics.resiliencia}%)
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${
-                        metrics.resiliencia >= 80 ? 'bg-[#10b981]' : 'bg-[#f59e0b]'
-                      }`}
-                      style={{ width: `${metrics.resiliencia}%` }}
-                    />
-                  </div>
-                </div>
-
-                {earnedXp > 0 && (
-                  <div className="pt-2 border-t border-[#1e293b] flex items-center justify-between text-[10px] font-mono text-[#10b981]">
-                    <span>INMERSIÓN OPERATIVA:</span>
-                    <span className="font-bold px-2 py-0.5 bg-[#10b981]/20 border border-[#10b981] rounded-2xs">
-                      +{earnedXp} XP ACREDITADOS
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Chatbot Evaluador Socrático LISA & Red Team */}
-              <div className="flex-1 min-h-[300px] flex flex-col bg-[#040813] border border-[#1e293b] rounded-2xs overflow-hidden shadow-inner">
-                <div className="px-3 py-2 bg-[#0c1325] border-b border-[#1e293b] flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
-                    <Bot className="w-3.5 h-3.5 text-[#00ffff]" />
-                    CANAL DE EVALUACIÓN COGNITIVA
-                  </span>
-                  <span className="text-[10px] font-mono text-[#64748b]">LISA v4.2</span>
-                </div>
-
-                {/* Message display container */}
-                <div className="flex-1 p-3 overflow-y-auto space-y-2.5 font-sans text-xs">
-                  {chatMessages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={`p-2.5 rounded-2xs max-w-[90%] leading-relaxed ${
-                        m.sender === 'user'
-                          ? 'ml-auto bg-[#1c335e] text-white border border-[#3b82f6]/40'
-                          : m.sender === 'redteam'
-                          ? 'mr-auto bg-[#ff0055]/10 border-l-2 border-[#ff0055] text-[#fca5a5]'
-                          : m.sender === 'system'
-                          ? 'mx-auto text-center bg-[#0b1329] text-[#00e676] text-[11px] border border-[#00e676]/30'
-                          : 'mr-auto bg-[#13223f] border-l-2 border-[#00ffff] text-[#cbd5e1]'
+                      key={msg.id}
+                      className={`p-3 rounded text-xs max-w-[85%] leading-relaxed ${
+                        msg.type === 'ai'
+                          ? 'bg-[#0f1c3a] border-l-3 border-[#00ffff] text-slate-100 self-start'
+                          : msg.type === 'user'
+                            ? 'bg-[#1c335e] text-slate-100 ml-auto'
+                            : 'bg-[#ff0055]/10 border-l-3 border-[#ff0055] text-slate-100 self-start'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2 mb-1 text-[10px] font-mono font-bold opacity-80">
-                        <span>{m.author}</span>
-                        <span className="text-[9px] opacity-60">{m.timestamp}</span>
-                      </div>
-                      <p>{m.text}</p>
+                      <strong className={`block mb-1 text-[11px] font-mono ${
+                        msg.type === 'ai' ? 'text-[#00ffff]' : msg.type === 'user' ? 'text-[#38bdf8]' : 'text-[#ff0055]'
+                      }`}>
+                        {msg.author}:
+                      </strong>
+                      <span>{msg.text}</span>
                     </div>
                   ))}
                   <div ref={chatBottomRef} />
                 </div>
 
-                {/* Input Bar */}
-                <form
-                  onSubmit={handleSendAnalystDecision}
-                  className="p-2 bg-[#0c1325] border-t border-[#1e293b] flex gap-2"
-                >
-                  <input
+                <form onSubmit={handleSubmitChat} className="flex p-2 bg-[#050a17] border-t border-[#12254d] gap-2">
+                  <input 
                     type="text"
-                    id="analyst-input-text"
-                    value={analystInput}
-                    onChange={(e) => setAnalystInput(e.target.value)}
-                    placeholder="Escriba su curso de acción y justificación..."
-                    className="flex-1 bg-[#030611] border border-[#1e293b] rounded-2xs px-2.5 py-1.5 text-xs text-white placeholder-[#64748b] focus:outline-none focus:border-[#00ffff] font-mono"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Justifique su decisión (ej. Sector Este, firma térmica cero, finta)..."
+                    className="flex-1 bg-[#02040b] border border-[#12254d] rounded text-xs px-3 py-2 text-white focus:border-[#00ffff] outline-none font-sans"
                   />
-                  <button
+                  <button 
                     type="submit"
-                    className="px-3 py-1.5 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-mono text-xs font-bold rounded-2xs transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                    className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-4 py-2 rounded text-xs font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>Enviar</span>
-                    <Send className="w-3 h-3" />
+                    <span>Enviar Decisiones</span>
+                    <Send className="w-3.5 h-3.5" />
                   </button>
                 </form>
               </div>
 
-            </div>
-          </section>
+              {/* Right Column: Radar Metrics */}
+              <div className="space-y-4">
+                <div className="bg-[#0c152a] border border-[#12254d] rounded-md p-4">
+                  <div className="text-xs font-bold text-white font-mono mb-3">
+                    INDICADORES COGNITIVOS DE AMENAZA
+                  </div>
 
+                  {/* Metric 1 */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-[11px] font-mono text-[#64748b] mb-1">
+                      <span>Detección de Decepción Táctica</span>
+                      <span className="text-slate-300">Crítica (90% Exposición)</span>
+                    </div>
+                    <div className="h-1.5 bg-[#0b1122] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#ff0055] transition-all duration-400" style={{ width: '90%' }} />
+                    </div>
+                  </div>
+
+                  {/* Metric 2 */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-[11px] font-mono text-[#64748b] mb-1">
+                      <span>Exposición OPSEC</span>
+                      <span className="text-slate-300">
+                        {emconActive && geointSanitized ? 'Mínima (5% Exposición)' : 'Alta (80% Exposición)'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[#0b1122] rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-400 ${
+                          emconActive && geointSanitized ? 'bg-[#00ff66]' : 'bg-[#ff0055]'
+                        }`}
+                        style={{ width: emconActive && geointSanitized ? '5%' : '80%' }} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Metric 3 */}
+                  <div className="mb-2">
+                    <div className="flex justify-between text-[11px] font-mono text-[#64748b] mb-1">
+                      <span>Coeficiente de Rigor Científico (CRC)</span>
+                      <span className="text-slate-300">
+                        {resilienceScore === 100 ? 'Excelente (100% Rigor)' : `${globalXP}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[#0b1122] rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-400 ${
+                          resilienceScore === 100 ? 'bg-[#00ff66]' : 'bg-[#00ffff]'
+                        }`}
+                        style={{ width: `${resilienceScore === 100 ? 100 : globalXP}%` }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scorecard CTA Button */}
+                {resilienceScore === 100 && (
+                  <button 
+                    onClick={handleGenerateScorecard}
+                    className="w-full py-3.5 px-4 bg-[#00ff66] hover:bg-[#00e65a] text-[#02040a] font-bold font-mono text-sm rounded transition-all shadow-[0_0_20px_rgba(0,255,102,0.4)] flex items-center justify-center gap-2 cursor-pointer animate-pulse"
+                  >
+                    <span>🎖️ Generar Boleta de Calificación CVIE</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* PREVISUALIZACIÓN DE BOLETA DE CAPACITACIÓN */}
+            {showScorecard && (
+              <div 
+                ref={scorecardRef}
+                className="mt-6 p-4 sm:p-6 bg-[#060f24] border border-[#00ff66] rounded-md transition-all duration-300"
+              >
+                <div className="flex justify-between items-center border-b border-[#12254d] pb-2 mb-4">
+                  <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                    <Award className="w-4 h-4 text-[#00ff66]" />
+                    <span>PREVISUALIZACIÓN DE BOLETA DE CAPACITACIÓN</span>
+                  </h3>
+                  <button 
+                    onClick={safePrint}
+                    className="px-3 py-1 bg-white text-black hover:bg-slate-200 rounded text-xs font-bold font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>🖨️ Imprimir Boleta Táctica</span>
+                  </button>
+                </div>
+
+                {/* Certificate Card Body */}
+                <div className="p-6 bg-white text-black rounded max-w-xl mx-auto shadow-2xl font-serif">
+                  <div className="text-center mb-3 border-b border-black pb-2">
+                    <h4 className="text-sm font-bold tracking-wide">ESCUELA DE COMANDO Y ESTADO MAYOR DEL EJÉRCITO</h4>
+                    <h5 className="text-xs font-normal italic">Mcal. Andrés de Santa Cruz</h5>
+                    <span className="text-[11px] font-mono block mt-1">CVIE - FASE IV: INMERSIÓN OPERATIVA</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3 font-sans">
+                    <div><b>OFICIAL:</b> MY. DEM. EXAMINADO GENERAL</div>
+                    <div><b>FECHA:</b> {today}</div>
+                    <div><b>NÚCLEO:</b> Fusión de Sensores Multi-INT & OPSEC</div>
+                    <div><b>COEFICIENTE CRC FINAL:</b> {globalXP}%</div>
+                  </div>
+
+                  <table className="w-full border-collapse text-xs mb-3 font-sans">
+                    <thead>
+                      <tr className="bg-slate-200 border border-black">
+                        <th className="p-1.5 border border-black text-left">Eje Temático Acreditado</th>
+                        <th className="p-1.5 border border-black text-center">Puntaje (XP)</th>
+                        <th className="p-1.5 border border-black text-center">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border border-black">
+                        <td className="p-1.5 border border-black font-semibold">
+                          <b>SABER:</b> Fusión Multi-INT y Criterio Gibson (Fases 1-7)
+                        </td>
+                        <td className="p-1.5 border border-black text-center font-mono">{saberXP} / 50</td>
+                        <td className="p-1.5 border border-black text-center font-bold text-emerald-700">
+                          {saberXP >= 35 ? 'ACREDITADO' : 'PENDIENTE'}
+                        </td>
+                      </tr>
+                      <tr className="border border-black">
+                        <td className="p-1.5 border border-black font-semibold">
+                          <b>HACER:</b> Contramedidas OPSEC Activas y Falsación Táctica
+                        </td>
+                        <td className="p-1.5 border border-black text-center font-mono">{hacerXP} / 50</td>
+                        <td className="p-1.5 border border-black text-center font-bold text-emerald-700">
+                          {hacerXP >= 35 ? 'ACREDITADO' : 'PENDIENTE'}
+                        </td>
+                      </tr>
+                      <tr className="bg-slate-100 border border-black font-bold">
+                        <td className="p-1.5 border border-black text-right">NOTA TOTAL INTEGRAL:</td>
+                        <td className="p-1.5 border border-black text-center font-mono">{globalXP} / 100</td>
+                        <td className="p-1.5 border border-black text-center text-emerald-800">
+                          {globalXP >= 75 ? 'CERTIFICACIÓN APROBADA' : 'REPROBADO'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div className="text-[10px] border-t border-dashed border-black pt-2 text-center italic">
+                    "Seguridad, Resiliencia y Defensa del Territorio Nacional" // Firma Digital CVIE
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+
+      {/* HIDDEN DOCUMENT PRINT TEMPLATE (FOR WEB PRINT) */}
+      <div id="scorecard-print-area" className="hidden print:block text-black bg-white p-10 font-serif">
+        <div className="text-center mb-6 border-b-2 border-black pb-3">
+          <h2 className="text-xl font-bold">ESTADO PLURINACIONAL DE BOLIVIA</h2>
+          <h3 className="text-lg font-bold">ESCUELA DE COMANDO Y ESTADO MAYOR DEL EJÉRCITO</h3>
+          <h4 className="text-base italic">"Mcal. Andrés de Santa Cruz"</h4>
+          <p className="font-mono text-xs mt-1">SISTEMA VIRTUAL DE ADIESTRAMIENTO DE INTELIGENCIA DE ESTADO MAYOR (CVIE)</p>
+        </div>
+
+        <div className="mb-6 text-sm space-y-1">
+          <p><b>OFICIAL EVALUADO:</b> MY. DEM. EXAMINADO GENERAL</p>
+          <p><b>EVALUACIÓN:</b> FASE IV: INMERSIÓN OPERATIVA Y FUSIÓN DE SENSORES ISR</p>
+          <p><b>FECHA DE EMISIÓN:</b> {today}</p>
+          <p><b>COEFICIENTE DE RIGOR CIENTÍFICO (CRC):</b> {globalXP}%</p>
+        </div>
+
+        <table className="w-full border-collapse text-sm mb-12 border border-black">
+          <thead>
+            <tr className="bg-slate-100 border border-black">
+              <th className="p-2.5 border border-black text-left">Eje Evaluativo de Competencias</th>
+              <th className="p-2.5 border border-black text-left">Metodología Utilizada</th>
+              <th className="p-2.5 border border-black text-center">Desempeño / Puntos (XP)</th>
+              <th className="p-2.5 border border-black text-center">Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border border-black">
+              <td className="p-2.5 border border-black font-bold">Dimensión del Saber (Fusión Multi-INT)</td>
+              <td className="p-2.5 border border-black">Análisis de Sensores ISR y Aplicación del Flujo Gibson</td>
+              <td className="p-2.5 border border-black text-center font-mono">{saberXP} / 50 XP</td>
+              <td className="p-2.5 border border-black text-center font-bold">
+                {saberXP >= 35 ? 'APROBADO' : 'NO ACREDITADO'}
+              </td>
+            </tr>
+            <tr className="border border-black">
+              <td className="p-2.5 border border-black font-bold">Dimensión del Hacer (Medidas OPSEC & Falsación)</td>
+              <td className="p-2.5 border border-black">Criptografía, Silencio EMCON y Sanitización de Datos</td>
+              <td className="p-2.5 border border-black text-center font-mono">{hacerXP} / 50 XP</td>
+              <td className="p-2.5 border border-black text-center font-bold">
+                {hacerXP >= 35 ? 'APROBADO' : 'NO ACREDITADO'}
+              </td>
+            </tr>
+            <tr className="border border-black bg-slate-100 font-bold">
+              <td colSpan={2} className="p-2.5 border border-black text-right">CALIFICACIÓN FINAL INTEGRADA:</td>
+              <td className="p-2.5 border border-black text-center font-mono">{globalXP} / 100 XP</td>
+              <td className="p-2.5 border border-black text-center font-bold">
+                {globalXP >= 75 ? 'CERTIFICACIÓN OTORGADA' : 'NO CERTIFICADO'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="mt-16 flex justify-around text-center text-xs">
+          <div>
+            <div className="border-t border-black w-48 mx-auto pt-1 font-semibold">Firma del Analista Evaluado</div>
+          </div>
+          <div>
+            <div className="border-t border-black w-48 mx-auto pt-1 font-semibold">Director de Evaluación CVIE</div>
+          </div>
         </div>
       </div>
+
     </div>
   );
 }

@@ -1,661 +1,293 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ShieldCheck, 
-  ShieldAlert, 
-  Clock, 
+  Globe, 
+  Shield, 
   AlertTriangle, 
   Radio, 
   Send, 
-  RotateCcw, 
+  Printer, 
+  CheckCircle2, 
+  XCircle, 
   X, 
-  Zap, 
-  Scale, 
-  Bot, 
-  User, 
-  Sparkles, 
-  Lock, 
-  Unlock, 
-  Terminal as TerminalIcon, 
-  Cpu, 
-  Wifi, 
-  WifiOff, 
-  Server, 
-  Key, 
-  Database, 
-  Layers, 
-  Check, 
-  EyeOff, 
-  ArrowRight,
-  Activity,
-  Network
+  Award, 
+  ArrowRight, 
+  Clock, 
+  Activity, 
+  FileText, 
+  RefreshCw,
+  Sliders,
+  Check
 } from 'lucide-react';
+import { safePrint } from '../utils/safePrint';
 
 interface FaseTecnologicaDetalleProps {
   onClose?: () => void;
   onEnterModule?: () => void;
 }
 
-interface CyberFeedItem {
-  id: string;
-  type: 'SIGINT' | 'SCADA' | 'EW' | 'MALWARE';
-  typeLabel: string;
-  threatLevel: string;
-  threatColor: string;
-  ringTarget: number;
-  source: string;
-  title: string;
-  description: string;
-  isBreached: boolean;
-  isInject?: boolean;
-}
-
 interface ChatMessage {
   id: string;
-  sender: 'ai' | 'redteam' | 'user' | 'system';
   author: string;
   text: string;
-  timestamp: string;
-}
-
-interface WardenRingState {
-  id: number;
-  name: string;
-  shortName: string;
-  category: string;
-  vuln: number;
-  defended: boolean;
-  defenseType: string;
-  mitigation: number;
+  type: 'ai' | 'user' | 'red';
 }
 
 export function FaseTecnologicaDetalle({ onClose, onEnterModule }: FaseTecnologicaDetalleProps) {
-  // Threat Level / Escalation (1: Seguro, 2: Guerra Electrónica Activa, 3: Colapso Multidominio)
-  const [difficulty, setDifficulty] = useState<1 | 2 | 3>(1);
+  // Global Application State
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [saberXP, setSaberXP] = useState<number>(0);
+  const [hacerXP, setHacerXP] = useState<number>(0);
 
-  // Operational Stress Countdown Timer (in seconds)
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(240); // 04:00
-  const [timerActive, setTimerActive] = useState<boolean>(true);
-  const [isTimeExpired, setIsTimeExpired] = useState<boolean>(false);
+  // Tab 1: Ciberinteligencia & OSINT
+  const [selectedCOA, setSelectedCOA] = useState<number | null>(null);
+  const [w1Timer, setW1Timer] = useState<number>(90);
 
-  // Contrast Mode / Comparativa Didáctica
-  const [showContrastModal, setShowContrastModal] = useState<boolean>(false);
-
-  // Earned XP
-  const [earnedXp, setEarnedXp] = useState<number>(0);
-
-  // OPSEC Sanitization State
-  const [opsecSanitized, setOpsecSanitized] = useState<boolean>(false);
-  const [rotativeCrypted, setRotativeCrypted] = useState<boolean>(false);
-  const [terminalLines, setTerminalLines] = useState<string[]>([
-    '> Sistema OPSEC en línea...',
-    '> Monitoreando transmisiones tácticas en espectro VHF/UHF.',
-    '> Listo para sanitizar metadatos GEOINT/EXIF.',
-    '> Metadatos EXIF de imagen satelital detectados en canal secundario.'
-  ]);
-
-  // Global Cognitive & Vulnerability Metrics
-  const [metrics, setMetrics] = useState({
-    opsecExposition: 80,
-    scadaVuln: 90,
-    resilience: 15
+  // Tab 2: Seguridad de Operaciones (OPSEC)
+  const [opsecInput, setOpsecInput] = useState<string[]>([]);
+  const [opsecValidated, setOpsecValidated] = useState<boolean>(false);
+  const [w2Timer, setW2Timer] = useState<number>(90);
+  const [opsecFeedback, setOpsecFeedback] = useState<{ msg: string; type: 'success' | 'error' | 'idle' }>({
+    msg: 'Establezca la prioridad de los procedimientos tácticos haciendo clic en ellos.',
+    type: 'idle'
   });
 
-  // Warden Rings State
-  const [rings, setRings] = useState<Record<number, WardenRingState>>({
-    1: {
-      id: 1,
-      name: 'Anillo 1: Liderazgo C4ISR',
-      shortName: 'A1: C4ISR',
-      category: 'Puesto de Mando y Dirección',
-      vuln: 75,
-      defended: false,
-      defenseType: 'Criptografía Simétrica',
-      mitigation: 20
-    },
-    2: {
-      id: 2,
-      name: 'Anillo 2: Elementos Esenciales',
-      shortName: 'A2: Esenciales',
-      category: 'Red Eléctrica SCADA y Combustible',
-      vuln: 90,
-      defended: false,
-      defenseType: 'Aislamiento Físico (Air-Gap)',
-      mitigation: 25
-    },
-    3: {
-      id: 3,
-      name: 'Anillo 3: Infraestructura Física',
-      shortName: 'A3: Infraestructura',
-      category: 'Líneas de Enlace y Nodos de Fibra',
-      vuln: 50,
-      defended: false,
-      defenseType: 'Fibra Óptica Redundante',
-      mitigation: 15
-    },
-    4: {
-      id: 4,
-      name: 'Anillo 4: Población / Terreno Humano',
-      shortName: 'A4: Población',
-      category: 'Cultura OPSEC y Concientización',
-      vuln: 60,
-      defended: false,
-      defenseType: 'Protocolos Antiphishing & OPSEC',
-      mitigation: 15
-    },
-    5: {
-      id: 5,
-      name: 'Anillo 5: Fuerzas Militares Desplegadas',
-      shortName: 'A5: Fuerzas',
-      category: 'Unidades de Maniobra y Sensores',
-      vuln: 45,
-      defended: false,
-      defenseType: 'Salto de Frecuencia Militar',
-      mitigation: 15
-    }
-  });
+  // Tab 3: Análisis de la Amenaza (ECEME)
+  const [ecemeSel1, setEcemeSel1] = useState<string>('none');
+  const [ecemeSel2, setEcemeSel2] = useState<string>('none');
+  const [ecemeSel3, setEcemeSel3] = useState<string>('none');
+  const [ecemeSel4, setEcemeSel4] = useState<string>('none');
+  const [ecemeValidated, setEcemeValidated] = useState<boolean>(false);
+  const [w3Timer, setW3Timer] = useState<number>(90);
 
-  // Cyber Feeds
-  const [cyberFeeds, setCyberFeeds] = useState<CyberFeedItem[]>([
-    {
-      id: 'f1',
-      type: 'SIGINT',
-      typeLabel: 'SIGINT // C4ISR',
-      threatLevel: 'AMENAZA: DDoS',
-      threatColor: 'text-[#f59e0b]',
-      ringTarget: 1,
-      source: 'Cortafuegos Perimetral Central',
-      title: 'F1: Intento de saturación de paquetes C4ISR',
-      description: 'Detectado intento de denegación de servicio sobre el nodo de mando principal. Apunta a desconectar la toma de decisiones (Anillo 1).',
-      isBreached: false
-    },
-    {
-      id: 'f2',
-      type: 'SCADA',
-      typeLabel: 'SCADA // ENERGÍA',
-      threatLevel: 'AMENAZA: INTRUSIÓN',
-      threatColor: 'text-[#ff0055]',
-      ringTarget: 2,
-      source: 'Sensor Telemétrico Subestación Oeste',
-      title: 'F2: Ecos anómalos de comandos SCADA industriales',
-      description: 'Inyección de paquetes Modbus/TCP alterados en la subestación eléctrica del Sector Fronterizo para provocar corte de energía (Anillo 2).',
-      isBreached: true
-    },
-    {
-      id: 'f3',
-      type: 'EW',
-      typeLabel: 'EW // COMINT',
-      threatLevel: 'AMENAZA: ESCUCHA',
-      threatColor: 'text-[#00ffff]',
-      ringTarget: 3,
-      source: 'Estación de Guerra Electrónica TAC-1',
-      title: 'F3: Emisión de barrido de frecuencias enemiga',
-      description: 'La inteligencia enemiga intenta triangular las coordenadas de nuestra estación repetidora VHF mediante Medidas de Apoyo Electrónico (MAE) (Anillo 3).',
-      isBreached: false
-    }
-  ]);
-
-  // Chatbot / Red Team Messages
+  // Tab 4: Resiliencia & Evaluación Sumativa
+  const [simStep, setSimStep] = useState<number>(0);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
-      id: 'm1',
-      sender: 'ai',
-      author: 'TUTOR LISA',
-      text: 'Oficial analista, he inicializado la Fase III en ventana táctica de 4 minutos. El adversario ha detectado nuestras coordenadas VHF mediante MAE (F3) y apunta a interrumpir la red SCADA del oeste (F2). ¿Qué contramedidas de OPSEC o blindaje concéntrico de Warden propone de inmediato? Justifique técnica y doctrinalmente.',
-      timestamp: '00:00:01'
+      id: 'init-msg',
+      author: 'TUTOR LISA (CYBER-RED)',
+      text: 'Oficial analista, de acuerdo con la Metodología de Análisis de la Amenaza de la ECEME (EM-MI-AA-02), el oponente aprovecha nuestras vulnerabilidades de falta de aislamiento SCADA y nuestra exposición OPSEC. ¿Qué medida correctiva de ciberdefensa táctica implementará para blindar el suministro de energía nacional y qué procedimiento prioritario denegará la geolocalización de nuestra artillería?',
+      type: 'ai'
     }
   ]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [w4Timer, setW4Timer] = useState<number>(240);
+  const [isFinalCertified, setIsFinalCertified] = useState<boolean>(false);
+  const [showScorecard, setShowScorecard] = useState<boolean>(false);
 
-  const [analystInput, setAnalystInput] = useState<string>('');
-  const chatBottomRef = useRef<HTMLDivElement>(null);
-  const terminalBottomRef = useRef<HTMLDivElement>(null);
+  // Radar metrics
+  const [scadaRisk, setScadaRisk] = useState<number>(90);
+  const [opsecRisk, setOpsecRisk] = useState<number>(80);
+  const [resilienceScore, setResilienceScore] = useState<number>(0);
 
-  // Format mm:ss
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const currentDate = new Date().toISOString().split('T')[0];
+
+  const globalXP = saberXP + hacerXP;
+
+  // Timers countdown per tab
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (activeTab === 0) {
+        setW1Timer((prev) => (prev > 0 ? prev - 1 : 0));
+      } else if (activeTab === 1) {
+        setW2Timer((prev) => (prev > 0 ? prev - 1 : 0));
+      } else if (activeTab === 2) {
+        setW3Timer((prev) => (prev > 0 ? prev - 1 : 0));
+      } else if (activeTab === 3) {
+        setW4Timer((prev) => (prev > 0 ? prev - 1 : 0));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Timer Effect
-  useEffect(() => {
-    if (!timerActive || remainingSeconds <= 0) return;
+  // Tab 1 Handler
+  const handleSelectCOA = (coaId: number) => {
+    setSelectedCOA(coaId);
+    if (coaId === 2) {
+      if (saberXP < 25) {
+        setSaberXP(25);
+      }
+    }
+  };
 
-    const interval = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsTimeExpired(true);
-          setTimerActive(false);
-          addChatMessage(
-            'redteam',
-            'RED TEAM ENEMIGO',
-            'CRISIS CRÍTICA: La parálisis de ciberdefensa provocó el colapso total de la red de energía nacional.'
-          );
-          return 0;
-        }
-        return prev - 1;
+  // Tab 2 OPSEC Handler
+  const handleToggleOpsecOrder = (actionText: string) => {
+    setOpsecInput((prev) => {
+      if (prev.includes(actionText)) {
+        return prev.filter((x) => x !== actionText);
+      } else {
+        return [...prev, actionText];
+      }
+    });
+    setOpsecFeedback({
+      msg: 'Establezca la prioridad de los procedimientos tácticos y luego presione Validar.',
+      type: 'idle'
+    });
+  };
+
+  const handleValidateOpsec = () => {
+    const isCorrect =
+      opsecInput[0]?.startsWith('A.') &&
+      opsecInput[1]?.startsWith('B.') &&
+      opsecInput[2]?.startsWith('C.');
+
+    if (isCorrect) {
+      setOpsecValidated(true);
+      setHacerXP((prev) => Math.min(50, prev + 25));
+      setOpsecRisk(15);
+      setOpsecFeedback({
+        msg: '¡Medidas OPSEC validadas con éxito! Ha reducido la huella radioeléctrica y electromagnética del Ejército de Bolivia.',
+        type: 'success'
       });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timerActive, remainingSeconds]);
-
-  // Auto-scroll chat and terminal
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
-  useEffect(() => {
-    terminalBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [terminalLines]);
-
-  const addChatMessage = (sender: ChatMessage['sender'], author: string, text: string) => {
-    const d = new Date();
-    const ts = d.toTimeString().split(' ')[0];
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `msg-${Date.now()}-${Math.random()}`,
-        sender,
-        author,
-        text,
-        timestamp: ts
-      }
-    ]);
-  };
-
-  const printTerminalLine = (text: string) => {
-    setTerminalLines((prev) => [...prev, text]);
-  };
-
-  // Defend Warden Ring Action
-  const handleDefendRing = (ringId: number) => {
-    const targetRing = rings[ringId];
-    if (!targetRing) return;
-
-    if (targetRing.defended) {
-      addChatMessage('system', 'CVIE SISTEMA', `El Anillo ${ringId} ya cuenta con defensa activa.`);
-      return;
+    } else {
+      setOpsecFeedback({
+        msg: 'Falla de Seguridad. El desorden en las medidas permite que la contrainteligencia enemiga triangule nuestras coordenadas tácticas.',
+        type: 'error'
+      });
     }
-
-    const newVuln = Math.max(10, targetRing.vuln - targetRing.mitigation);
-
-    setRings((prev) => ({
-      ...prev,
-      [ringId]: {
-        ...prev[ringId],
-        defended: true,
-        vuln: newVuln
-      }
-    }));
-
-    // Update global metrics
-    setMetrics((prev) => {
-      let newScada = prev.scadaVuln;
-      if (ringId === 2) {
-        newScada = Math.max(10, prev.scadaVuln - 45);
-      }
-      const newResilience = Math.min(100, prev.resilience + 20);
-      return {
-        ...prev,
-        scadaVuln: newScada,
-        resilience: newResilience
-      };
-    });
-
-    setEarnedXp((xp) => xp + 15);
-
-    printTerminalLine(`> Aplicando contramedida en ${targetRing.name}...`);
-    printTerminalLine(`> Implementando: ${targetRing.defenseType.toUpperCase()}.`);
-    printTerminalLine(`> Vulnerabilidad mitigada en -${targetRing.mitigation}%. Estado: PROTEGIDO (${newVuln}%).`);
-
-    addChatMessage(
-      'ai',
-      'CVIE SISTEMA',
-      `Anillo ${ringId} (${targetRing.name}) reforzado con éxito mediante ${targetRing.defenseType.toUpperCase()} (+15 XP).`
-    );
   };
 
-  // OPSEC Sanitizer Actions
-  const handleSanitizeOpsecMetadata = () => {
-    if (opsecSanitized) {
-      addChatMessage('system', 'CVIE SISTEMA', 'Los metadatos EXIF ya han sido eliminados de los servidores.');
-      return;
+  // Tab 3 ECEME Handler
+  const handleEvaluateEcemeMatrix = (s1: string, s2: string, s3: string, s4: string) => {
+    setEcemeSel1(s1);
+    setEcemeSel2(s2);
+    setEcemeSel3(s3);
+    setEcemeSel4(s4);
+
+    if (s1 === 'scada' && s2 === 'abandono' && s3 === 'digital' && s4 === 'paralisis') {
+      setEcemeValidated(true);
+      setSaberXP(50);
+      setScadaRisk(10);
+    } else {
+      setEcemeValidated(false);
     }
-
-    setOpsecSanitized(true);
-    printTerminalLine('> [OPSEC ACTIVO] Ejecutando purga de metadatos EXIF en capas GEOINT...');
-    printTerminalLine('> Coordenadas GPS del Sector Fronterizo REMOVIDAS.');
-    printTerminalLine('> Marcas de tiempo y números de serie de sensores eliminados.');
-    printTerminalLine('> Denegación de información táctica completada.');
-
-    setMetrics((prev) => ({
-      ...prev,
-      opsecExposition: Math.max(10, prev.opsecExposition - 40),
-      resilience: Math.min(100, prev.resilience + 20)
-    }));
-
-    setEarnedXp((xp) => xp + 20);
-
-    addChatMessage(
-      'ai',
-      'OPSEC MONITOR',
-      'Metadatos sanitizados con éxito (+20 XP). Las capturas satelitales y fotos en redes ya no delatan las posiciones de tropas ni puestos de mando.'
-    );
   };
 
-  const handleApplyRotativeEncryption = () => {
-    if (rotativeCrypted) {
-      addChatMessage('system', 'CVIE SISTEMA', 'La rotación criptográfica de 12 horas ya está activa.');
-      return;
-    }
-
-    setRotativeCrypted(true);
-    printTerminalLine('> [CRIPTOGRAFÍA] Generando llaves criptográficas militares asimétricas...');
-    printTerminalLine('> Algoritmo militar activo: Curvas Elípticas Ed25519.');
-    printTerminalLine('> Ciclo de rotación forzada programado: Cada 12 Horas.');
-    printTerminalLine('> Enlaces de datos C4ISR encriptados de extremo a extremo.');
-
-    setMetrics((prev) => ({
-      ...prev,
-      opsecExposition: Math.max(10, prev.opsecExposition - 30),
-      resilience: Math.min(100, prev.resilience + 20)
-    }));
-
-    setEarnedXp((xp) => xp + 20);
-
-    addChatMessage(
-      'ai',
-      'CIBERDEFENSA',
-      'Encriptación rotativa en línea (+20 XP). Las escuchas electromagnéticas hostiles (SIGINT/COMINT) han sido neutralizadas.'
-    );
-  };
-
-  // Active Cyber Attack (Stress Injector)
-  const handleInjectCyberAttack = () => {
-    setRemainingSeconds((prev) => Math.max(10, prev - 45));
-
-    const nextId = `f${cyberFeeds.length + 1}`;
-    const newFeed: CyberFeedItem = {
-      id: nextId,
-      type: 'MALWARE',
-      typeLabel: 'MALWARE // ZERO-DAY',
-      threatLevel: 'ATAQUE MASIVO',
-      threatColor: 'text-[#ff0055]',
-      ringTarget: 2,
-      source: 'Centro Nacional de Despacho Eléctrico',
-      title: 'ALERTA CRÍTICA: Intrusión SCADA activa en generadores',
-      description: 'Ataque sincronizado contra controladores lógicos programables (PLC). El enemigo intenta apagar el soporte de energía de las bases fronterizas.',
-      isBreached: true,
-      isInject: true
-    };
-
-    setCyberFeeds((prev) => [newFeed, ...prev]);
-
-    // Expose Rings 1 and 2
-    setRings((prev) => ({
-      ...prev,
-      1: { ...prev[1], vuln: Math.min(100, prev[1].vuln + 15), defended: false },
-      2: { ...prev[2], vuln: Math.min(100, prev[2].vuln + 25), defended: false }
-    }));
-
-    setMetrics((prev) => ({
-      opsecExposition: Math.min(100, prev.opsecExposition + 15),
-      scadaVuln: Math.min(100, prev.scadaVuln + 25),
-      resilience: Math.max(5, prev.resilience - 15)
-    }));
-
-    printTerminalLine('> [ALERTA FLASH] Intrusión detectada en controladores SCADA...');
-    printTerminalLine('> Parámetros de frecuencia eléctrica desviados.');
-    printTerminalLine('> Tiempo de reacción colapsado (-45 segundos).');
-
-    addChatMessage(
-      'redteam',
-      'RED TEAM ENEMIGO',
-      '⚠️ ¡ALERTA ROJA! Ciberintrusión masiva SCADA detectada en la red eléctrica del oeste. Se ha reducido la ventana operativa en -45s.'
-    );
-  };
-
-  // Preset: Simular Falla Crítica Típica (Enfoque Tradicional / Sin Defensa de Warden)
-  const applyTraditionalFlawedPreset = () => {
-    setRings({
-      1: { ...rings[1], vuln: 85, defended: false },
-      2: { ...rings[2], vuln: 95, defended: false },
-      3: { ...rings[3], vuln: 70, defended: false },
-      4: { ...rings[4], vuln: 80, defended: false },
-      5: { ...rings[5], vuln: 65, defended: false }
-    });
-    setOpsecSanitized(false);
-    setRotativeCrypted(false);
-    setMetrics({
-      opsecExposition: 85,
-      scadaVuln: 95,
-      resilience: 10
-    });
-
-    printTerminalLine('> [MODO DIDÁCTICO] Cargando arquitectura tradicional sin defensa de Warden...');
-    printTerminalLine('> Perímetro único vulnerado. SCADA expuesto a Internet sin Air-Gap.');
-    printTerminalLine('> Fuga masiva de metadatos GPS en fotos publicadas en redes abiertas.');
-
-    addChatMessage(
-      'redteam',
-      'SIMULADOR DE FALLA CRÍTICA',
-      'MODO DIDÁCTICO ILUSTRATIVO: Se muestra el error habitual de basarse solo en un firewall perimetral. Una vez comprometido el perímetro, los sistemas SCADA (Anillo 2) quedan totalmente expuestos y las filtraciones OPSEC revelan la ubicación del puesto de mando (Anillo 1).'
-    );
-  };
-
-  // Preset: Aplicar Resiliencia Sistémica Óptima (Warden + OPSEC + Cripto)
-  const applyOptimalWardenPreset = () => {
-    setRings({
-      1: { ...rings[1], vuln: 15, defended: true },
-      2: { ...rings[2], vuln: 10, defended: true },
-      3: { ...rings[3], vuln: 20, defended: true },
-      4: { ...rings[4], vuln: 25, defended: true },
-      5: { ...rings[5], vuln: 20, defended: true }
-    });
-    setOpsecSanitized(true);
-    setRotativeCrypted(true);
-    setMetrics({
-      opsecExposition: 15,
-      scadaVuln: 10,
-      resilience: 95
-    });
-    setEarnedXp(80);
-
-    printTerminalLine('> [MODO RESILIENCIA] Arquitectura concéntrica de Warden activada...');
-    printTerminalLine('> Air-Gap físico en subestaciones SCADA.');
-    printTerminalLine('> Metadatos sanitizados. Criptografía rotativa de 12H activa.');
-    printTerminalLine('> Enlaces de fibra óptica redundantes y salto de frecuencia.');
-
-    addChatMessage(
-      'ai',
-      'TUTOR LISA',
-      'ARQUITECTURA DE RESILIENCIA ÓPTIMA APLICADA (+80 XP): Todos los anillos de Warden están blindados en profundidad. El adversario no puede alcanzar el Anillo 1 (Liderazgo) ni paralizar el Anillo 2 (Energía), neutralizando la sorpresa estratégica.'
-    );
-  };
-
-  // Handle Analyst Chat Message & AI Socratic Evaluation
-  const handleSendAnalystMessage = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const text = analystInput.trim();
+  // Tab 4 Chat Dialogue Handler
+  const handleSendChat = () => {
+    const text = chatInput.trim();
     if (!text) return;
 
-    addChatMessage('user', 'ANALISTA TÁCTICO', text);
-    setAnalystInput('');
+    const userMsg: ChatMessage = {
+      id: `usr-${Date.now()}`,
+      author: 'ANALISTA DE DEFENSA',
+      text,
+      type: 'user'
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput('');
 
     setTimeout(() => {
-      evaluateCyberPedagogy(text.toLowerCase());
+      processDialogueEvaluation(text.toLowerCase());
     }, 600);
   };
 
-  const evaluateCyberPedagogy = (text: string) => {
-    const hasCyberKeywords = 
-      text.includes('airgap') || 
-      text.includes('air-gap') || 
-      text.includes('segreg') || 
-      text.includes('redund') || 
-      text.includes('warden') || 
-      text.includes('anillo 2') || 
-      text.includes('anillo 1') || 
-      text.includes('cifrado') || 
-      text.includes('exif') || 
-      text.includes('scada') || 
-      text.includes('opsec') || 
-      text.includes('pic') || 
-      text.includes('aislamiento');
+  const processDialogueEvaluation = (lowerText: string) => {
+    if (simStep === 0) {
+      const hasGeo = lowerText.includes('sanitiz') || lowerText.includes('exif');
+      const hasScada = lowerText.includes('airgap') || lowerText.includes('aislamiento') || lowerText.includes('segregacion');
 
-    if (hasCyberKeywords) {
-      addChatMessage(
-        'ai',
-        'TUTOR LISA',
-        'Excelente aplicación de la doctrina de defensa de Warden. Aplicar Air-Gap en los sistemas SCADA y sanitización OPSEC rompe la capacidad del adversario de paralizar nuestros elementos esenciales. Escalando simulación táctica al siguiente nivel.'
-      );
-
-      setEarnedXp((xp) => xp + 25);
-
-      if (difficulty === 1) {
-        setDifficulty(2);
-        addChatMessage(
-          'redteam',
-          'RED TEAM ENEMIGO',
-          'NIVEL 2: El oponente inicia interferencias activas sobre enlaces VHF. Desplegando contramedidas de espectro y salto de frecuencia.'
-        );
-      } else if (difficulty === 2) {
-        setDifficulty(3);
-        setRemainingSeconds((prev) => Math.min(prev, 60));
-        addChatMessage(
-          'redteam',
-          'RED TEAM ENEMIGO',
-          'NIVEL 3 (VENTANA MÁXIMA): El oponente lanza un exploit zero-day contra el Comando Conjunto. Quedan 60 segundos para sanitizar y blindar los enlaces C4ISR.'
-        );
+      if (hasGeo && hasScada) {
+        const reply: ChatMessage = {
+          id: `ai-${Date.now()}`,
+          author: 'TUTOR LISA (CYBER-RED)',
+          text: 'Correcto. El aislamiento SCADA (Air-Gap) evita el control malicioso externo, mientras que la sanitización EXIF deniega las coordenadas geográficas de la artillería. Siguiente escenario de crisis: El enemigo realiza un barrido SIGINT masivo en el frente norte. ¿Qué contramedida de comunicaciones aplica de inmediato?',
+          type: 'ai'
+        };
+        setChatMessages((prev) => [...prev, reply]);
+        setHacerXP((prev) => Math.min(50, prev + 15));
+        setSimStep(1);
+      } else {
+        const reply: ChatMessage = {
+          id: `red-${Date.now()}`,
+          author: 'TUTOR LISA (CYBER-RED)',
+          text: 'Vulnerable. Sus directivas no aseguran las variables críticas. Debe sanitizar metadatos de coordenadas y aplicar un aislamiento riguroso (Air-Gap) a la red SCADA.',
+          type: 'red'
+        };
+        setChatMessages((prev) => [...prev, reply]);
       }
-    } else {
-      addChatMessage(
-        'ai',
-        'TUTOR LISA',
-        'Su respuesta carece del rigor metodológico exigido por la directiva OPSEC. Reexamine el Anillo 2 de Warden: golpear el combustible y la energía tiene consecuencias desastrosas e inmediatas en la cadena de mando (Anillo 1). Debe implementar Air-Gap o encriptación rotativa.'
-      );
+    } else if (simStep === 1) {
+      const hasEmcon =
+        lowerText.includes('emcon') ||
+        lowerText.includes('silencio') ||
+        lowerText.includes('espectro') ||
+        lowerText.includes('frecuencia');
+
+      if (hasEmcon) {
+        const reply: ChatMessage = {
+          id: `ai-${Date.now()}`,
+          author: 'TUTOR LISA (CYBER-RED)',
+          text: 'Excelente. Aplicar EMCON y rotación de espectro/salto de frecuencias neutraliza el barrido de triangulación. Ha superado con distinción académica todas las fases de Resiliencia Tecnológica de la CVIE.',
+          type: 'ai'
+        };
+        setChatMessages((prev) => [...prev, reply]);
+        setHacerXP(50);
+        setResilienceScore(100);
+        setIsFinalCertified(true);
+      } else {
+        const reply: ChatMessage = {
+          id: `red-${Date.now()}`,
+          author: 'TUTOR LISA (CYBER-RED)',
+          text: 'Grave error. Sin silencio EMCON o rotación dinámica, el adversario triangulará la posición del Comando Táctico en segundos.',
+          type: 'red'
+        };
+        setChatMessages((prev) => [...prev, reply]);
+      }
     }
   };
 
-  const getThreatBadge = () => {
-    switch (difficulty) {
-      case 1:
-        return (
-          <span className="px-3 py-1 bg-[#00e676]/10 border border-[#00e676] text-[#00e676] font-mono text-[11px] font-bold rounded-2xs tracking-wider uppercase">
-            NIVEL 1: SEGURO
-          </span>
-        );
-      case 2:
-        return (
-          <span className="px-3 py-1 bg-[#f59e0b]/10 border border-[#f59e0b] text-[#f59e0b] font-mono text-[11px] font-bold rounded-2xs tracking-wider uppercase animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.25)]">
-            NIVEL 2: GUERRA ELECTRÓNICA ACTIVA
-          </span>
-        );
-      case 3:
-        return (
-          <span className="px-3 py-1 bg-[#ff0055]/20 border border-[#ff0055] text-[#ff0055] font-mono text-[11px] font-bold rounded-2xs tracking-wider uppercase shadow-[0_0_15px_rgba(255,0,85,0.4)] animate-pulse">
-            NIVEL 3: COLAPSO MULTIDOMINIO
-          </span>
-        );
-    }
+  const triggerPrint = () => {
+    safePrint();
   };
 
   return (
     <div 
-      id="fase-tecnologica-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-3 lg:p-5 bg-[#030712]/90 backdrop-blur-md overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex flex-col p-2 sm:p-4 text-slate-100"
     >
-      {/* Contenedor Principal Dashboard CVIE Fase III */}
-      <div 
-        id="fase-tecnologica-container"
-        className="relative w-full max-w-[1600px] bg-[#0b1329] border border-[#1e3a6c] rounded-xs shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden my-auto flex flex-col max-h-[96vh]"
-      >
-        {/* Retícula militar táctica en esquinas */}
-        <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#00ffff] z-30 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#00ffff] z-30 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#00ffff] z-30 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#00ffff] z-30 pointer-events-none" />
-
-        {/* 1. OPERATIONAL TOP BAR */}
-        <header className="relative z-20 bg-[#070c1b] border-b-2 border-[#1e3a6c] px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+      {/* Container Box matching user code specifications */}
+      <div className="max-w-[1600px] w-full mx-auto my-auto bg-[#070d1e] border border-[#162a56] rounded-lg overflow-hidden flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.85)]">
+        
+        {/* TOP OPERATIONAL BAR */}
+        <header className="bg-[#040816] border-b-2 border-[#162a56] px-4 sm:px-6 py-3.5 flex justify-between items-center flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <span className="bg-[#00ffff]/10 border border-[#00ffff] text-[#00ffff] font-mono text-[11px] px-2.5 py-1 rounded-2xs tracking-widest uppercase shadow-[0_0_6px_rgba(0,255,255,0.3)]">
-              CVIE FASE III // WAR GAME
+            <span className="bg-[#00ffff]/10 border border-[#00ffff] text-[#00ffff] font-mono text-xs px-2.5 py-1 rounded tracking-wider uppercase">
+              CVIE FASE III // RESILIENCIA TECNOLÓGICA
             </span>
             <div>
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                Operación Resiliencia: Blindaje de Infraestructuras Críticas
+              <h1 className="text-sm sm:text-base font-bold text-white leading-snug">
+                Gestión de Riesgo, Ciberdefensa y Análisis de Amenazas (Doctrina ECEME)
               </h1>
-              <p className="text-xs text-[#64748b]">
-                Sincronización de Ciberdefensa // Doctrina Warden // Monitoreo OPSEC [Doctrina Boliviana]
+              <p className="text-[11px] text-[#64748b]">
+                Modelo EM-MI-AA-02 // Seguridad de Operaciones OPSEC [Ejército de Bolivia]
               </p>
             </div>
           </div>
 
-          <div className="flex items-center flex-wrap gap-2.5 sm:gap-3 w-full xl:w-auto justify-between xl:justify-end">
-            {/* Stress Clock */}
-            <div className="flex items-center gap-2 bg-[#ff0055]/10 border border-[#ff0055] px-3 py-1.5 rounded-2xs shadow-[0_0_10px_rgba(255,0,85,0.15)]">
-              <span className="text-[10px] font-mono text-[#fca5a5] font-bold uppercase tracking-wider">
-                VENTANA OPERATIVA:
-              </span>
-              <span className={`font-mono text-lg font-bold tracking-widest ${
-                isTimeExpired 
-                  ? 'text-[#ff0055] animate-bounce' 
-                  : remainingSeconds <= 45 
-                  ? 'text-[#ff0055] animate-pulse' 
-                  : 'text-[#ff0055]'
-              }`}>
-                {isTimeExpired ? '00:00 // AGOTADO' : formatTime(remainingSeconds)}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="font-mono text-xs text-[#00e676] font-bold bg-[#00e676]/10 px-3 py-1.5 rounded border border-[#00e676]/30">
+              SISTEMA ACTIVO // XP ACUMULADO: <span className="text-white font-black">{globalXP}</span> / 100
             </div>
-
-            {/* Threat Level */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono text-[#64748b] uppercase hidden sm:inline">NIVEL AMENAZA:</span>
-              {getThreatBadge()}
-            </div>
-
-            {/* Botón de Inyección de Ciberataque Masivo */}
-            <button
-              type="button"
-              onClick={handleInjectCyberAttack}
-              className="px-3 py-1.5 bg-[#ff0055] hover:bg-[#dc2626] text-white font-mono text-xs font-bold rounded-2xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-red-500/30 shrink-0"
-              title="Acelera el reloj en -45s e inyecta malware en los sistemas SCADA de energía"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>+ Inyectar Ciberataque Masivo (SCADA)</span>
-            </button>
-
-            {/* Botón de Contraste Metodológico */}
-            <button
-              type="button"
-              onClick={() => setShowContrastModal(!showContrastModal)}
-              className="px-3 py-1.5 bg-[#3b82f6]/20 hover:bg-[#3b82f6]/30 border border-[#3b82f6] text-[#60a5fa] font-mono text-xs font-bold rounded-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-              title="Abre la comparativa interactiva entre el modelo tradicional perimetral y el modelo concéntrico de Warden"
-            >
-              <Scale className="w-3.5 h-3.5" />
-              <span>⚖️ Contrastar Metodología</span>
-            </button>
-
-            {onEnterModule && (
-              <button
-                type="button"
-                onClick={onEnterModule}
-                className="px-3 py-1.5 bg-[#00e676]/20 hover:bg-[#00e676]/30 border border-[#00e676] text-[#a7f3d0] font-mono text-xs font-bold rounded-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-                title="Avanzar a Fase IV: Inmersión Operativa"
-              >
-                <span>Avanzar a Fase IV</span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#00e676]" />
-              </button>
-            )}
-
             {onClose && (
-              <button
-                type="button"
+              <button 
                 onClick={onClose}
-                aria-label="Cerrar simulación"
-                className="p-1.5 text-[#64748b] hover:text-white hover:bg-[#111e3f] border border-[#1e3a6c] rounded-2xs transition-colors cursor-pointer shrink-0"
+                className="text-slate-400 hover:text-white p-1.5 hover:bg-slate-800 rounded transition-colors"
+                title="Cerrar módulo"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -663,519 +295,734 @@ export function FaseTecnologicaDetalle({ onClose, onEnterModule }: FaseTecnologi
           </div>
         </header>
 
-        {/* BANNER DE CONTRASTE METODOLÓGICO DIDÁCTICO (SI ESTÁ ACTIVO) */}
-        {showContrastModal && (
-          <div className="bg-[#0c1630] border-b border-[#3b82f6]/40 p-3 sm:p-4 text-xs font-mono transition-all animate-fadeIn">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-[#3b82f6]/20 text-[#60a5fa] border border-[#3b82f6] rounded-2xs font-bold text-[11px]">
-                  LABORATORIO COMPARATIVO
-                </span>
-                <span className="text-white font-bold">
-                  Contraste Didáctico: Ciberdefensa Perimetral Tradicional vs. Blindaje Multicapa Warden + OPSEC Activo (CVIE)
-                </span>
-              </div>
+        {/* NAVIGATION WINDOW WORKFLOW */}
+        <nav className="flex bg-[#030611] border-b border-[#162a56] flex-wrap">
+          <button
+            onClick={() => setActiveTab(0)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
+              activeTab === 0
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Globe className="w-4 h-4 text-[#00ffff]" />
+            <span>1. Ciberinteligencia & OSINT</span>
+          </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={applyTraditionalFlawedPreset}
-                  className="px-2.5 py-1 bg-[#ff0055]/20 hover:bg-[#ff0055]/30 text-[#fca5a5] border border-[#ff0055] rounded-2xs transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <AlertTriangle className="w-3 h-3 text-[#ff0055]" />
-                  <span>Simular Falla Crítica Tradicional</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={applyOptimalWardenPreset}
-                  className="px-2.5 py-1 bg-[#00e676]/20 hover:bg-[#00e676]/30 text-[#a7f3d0] border border-[#00e676] rounded-2xs transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <ShieldCheck className="w-3 h-3 text-[#00e676]" />
-                  <span>Aplicar Resiliencia Sistémica Óptima</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowContrastModal(false)}
-                  className="p-1 text-[#64748b] hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+          <button
+            onClick={() => setActiveTab(1)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
+              activeTab === 1
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Shield className="w-4 h-4 text-[#38bdf8]" />
+            <span>2. Seguridad de Operaciones (OPSEC)</span>
+          </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] font-sans">
-              <div className="p-2.5 bg-[#170a14] border border-[#ff0055]/30 rounded-2xs">
-                <div className="font-mono font-bold text-[#fca5a5] mb-1 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#ff0055]" />
-                  ENFOQUE REACTIVO TRADICIONAL (COLAPSO EN CADENA):
-                </div>
-                <p className="text-[#cbd5e1] leading-relaxed">
-                  Se confía en un único cortafuegos perimetral externo. La red SCADA industrial (Anillo 2) y el puesto de mando C4ISR (Anillo 1) comparten el mismo dominio de enrutamiento sin Air-Gap. Las fotos de operativos militares filtran metadatos EXIF con coordenadas GPS en canales públicos. <strong>Resultado:</strong> Una vulnerabilidad en el perímetro paraliza la red eléctrica nacional y expone la ubicación del Estado Mayor.
-                </p>
-              </div>
+          <button
+            onClick={() => setActiveTab(2)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
+              activeTab === 2
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-[#f59e0b]" />
+            <span>3. Análisis de la Amenaza (ECEME)</span>
+          </button>
 
-              <div className="p-2.5 bg-[#071915] border border-[#00e676]/30 rounded-2xs">
-                <div className="font-mono font-bold text-[#a7f3d0] mb-1 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#00e676]" />
-                  ENFOQUE DE RESILIENCIA TECNOLÓGICA CVIE (DOCTRINA WARDEN):
-                </div>
-                <p className="text-[#cbd5e1] leading-relaxed">
-                  Defensa en profundidad concéntrica. Aislamiento físico estricto (Air-Gap) en los elementos esenciales SCADA (Anillo 2), sanitización automática de metadatos GEOINT/EXIF en la consola OPSEC, encriptación rotativa cada 12 horas y enlaces tácticos redundantes. <strong>Resultado:</strong> Aunque el adversario intente saturar las telecomunicaciones externas (Anillo 5), el núcleo C4ISR y la matriz energética permanecen inexpugnables.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+          <button
+            onClick={() => setActiveTab(3)}
+            className={`flex-1 min-w-[170px] py-3.5 px-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
+              activeTab === 3
+                ? 'text-[#00ffff] border-b-[#00ffff] bg-[#00ffff]/5'
+                : 'text-[#64748b] border-b-transparent hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Radio className="w-4 h-4 text-[#00e676]" />
+            <span>4. Resiliencia & Evaluación Sumativa</span>
+          </button>
+        </nav>
 
-        {/* 2. GRID WORKSPACE LAYOUT (3 COLUMNAS) */}
-        <div className="relative z-10 flex-1 overflow-y-auto grid grid-cols-1 xl:grid-cols-12 min-h-[640px] bg-[#050811]">
-          
-          {/* ========================================================================= */}
-          {/* COLUMNA 1: CIBERINTELIGENCIA TÁCTICA FEED & TERMINAL OPSEC (3.2/12)       */}
-          {/* ========================================================================= */}
-          <section className="xl:col-span-3 border-b xl:border-b-0 xl:border-r border-[#1e3a6c] flex flex-col bg-[#0b1329]">
-            <div className="px-4 py-3 bg-[#081021] border-b border-[#1e3a6c] flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#00ffff] flex items-center gap-1.5 uppercase tracking-wider">
-                <Radio className="w-3.5 h-3.5 text-[#00ffff]" />
-                FEED CIBERINTELIGENCIA (MULTI-INT)
-              </span>
-              <span className="font-mono text-[10px] px-2 py-0.5 bg-[#111e3f] text-[#64748b] border border-[#1e3a6c] rounded-2xs font-semibold">
-                {cyberFeeds.length} REPORTES
-              </span>
-            </div>
-
-            <div className="p-3 sm:p-4 overflow-y-auto space-y-3 flex-1">
-              <p className="text-[11px] text-[#64748b] leading-relaxed">
-                Señales interceptadas en tiempo real. Utilice el terminal OPSEC inferior para denegar información crítica al adversario.
-              </p>
-
-              {/* Feed Items */}
-              {cyberFeeds.map((feed) => (
-                <div
-                  key={feed.id}
-                  className={`p-3 rounded-2xs border transition-all duration-200 ${
-                    feed.isBreached
-                      ? 'bg-[#ff0055]/10 border-[#ff0055] shadow-[0_0_12px_rgba(255,0,85,0.2)]'
-                      : 'bg-[#111e3f] border-[#1e3a6c] hover:border-[#3b82f6]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
-                    <span className={`px-1.5 py-0.5 rounded-2xs font-bold uppercase border ${
-                      feed.type === 'SIGINT'
-                        ? 'bg-[#3b82f6]/15 border-[#3b82f6] text-[#60a5fa]'
-                        : feed.type === 'SCADA'
-                        ? 'bg-[#f59e0b]/15 border-[#f59e0b] text-[#fbbf24]'
-                        : feed.type === 'EW'
-                        ? 'bg-[#a855f7]/15 border-[#a855f7] text-[#c084fc]'
-                        : 'bg-[#ff0055]/15 border-[#ff0055] text-[#fca5a5]'
-                    }`}>
-                      {feed.typeLabel}
-                    </span>
-                    <span className={`font-bold font-mono text-[10px] ${feed.threatColor}`}>
-                      {feed.threatLevel}
-                    </span>
+        {/* WINDOW 1: CIBERINTELIGENCIA ESTRATÉGICA & OSINT */}
+        {activeTab === 0 && (
+          <section className="p-4 sm:p-6 min-h-[560px] animate-fadeIn">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              <div>
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-4 mb-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 pb-1.5 border-b border-[#162a56]">
+                    ASESORAMIENTO AL ESCALÓN SUPERIOR (PLANIFICACIÓN DE OPERACIONES)
                   </div>
-
-                  <h4 className="font-sans text-xs font-bold text-white mb-1 leading-snug">
-                    {feed.title}
-                  </h4>
-
-                  <p className="text-[11px] text-[#cbd5e1] leading-relaxed mb-2 font-sans">
-                    {feed.description}
+                  <p className="text-xs text-[#94a3b8] mb-3">
+                    Con base en el análisis de la amenaza asimétrica, diseñe su recomendación formal para el Comando Conjunto evaluando el impacto sobre el Poder Militar.
                   </p>
 
-                  <div className="pt-2 border-t border-[#1e3a6c]/70 flex items-center justify-between text-[9px] font-mono text-[#64748b]">
-                    <span>ORIGEN: {feed.source}</span>
-                    <span className="text-[#00ffff]">ANILLO OBJETIVO: A{feed.ringTarget}</span>
-                  </div>
-                </div>
-              ))}
+                  <strong className="text-xs text-[#00ffff] block mb-2 font-mono">Escenario Operacional:</strong>
+                  <p className="text-xs text-[#cbd5e1] mb-4 bg-black/30 p-3 rounded border-l-4 border-[#00ffff] leading-relaxed">
+                    <strong className="text-white">Riesgo en Zonas Fronterizas:</strong> El adversario emplea operaciones psicológicas sintéticas en redes (OSINT) y barridos electromagnéticos hostiles (SIGINT) para perturbar el dispositivo y despliegue del Ejército de Bolivia.
+                  </p>
 
-              {/* Terminal OPSEC Sanitizer Console */}
-              <div className="bg-[#040813] border border-[#1e3a6c] rounded-2xs p-3 space-y-2.5 mt-3 shadow-inner">
-                <div className="text-xs font-mono font-bold text-white flex items-center justify-between border-b border-[#1e3a6c] pb-2">
-                  <span className="flex items-center gap-1.5 text-[#00e676]">
-                    <TerminalIcon className="w-3.5 h-3.5 text-[#00e676]" />
-                    CONSOLA DE SANITIZACIÓN OPSEC
-                  </span>
-                  <span className="text-[9px] px-1.5 py-0.5 bg-[#111e3f] text-[#64748b] rounded-2xs">
-                    SHELL VIRTUAL
-                  </span>
-                </div>
-
-                {/* Terminal Screen */}
-                <div className="h-28 bg-[#02050c] border border-[#1e3a6c]/60 rounded-2xs p-2 overflow-y-auto font-mono text-[10.5px] space-y-1 text-[#00e676]">
-                  {terminalLines.map((line, idx) => (
-                    <div key={idx} className="leading-tight">
-                      {line}
-                    </div>
-                  ))}
-                  <div ref={terminalBottomRef} />
-                </div>
-
-                {/* Terminal Buttons */}
-                <div className="space-y-1.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleSanitizeOpsecMetadata}
-                    disabled={opsecSanitized}
-                    className={`w-full py-1.5 px-2 text-[11px] font-mono font-bold rounded-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      opsecSanitized
-                        ? 'bg-[#00e676]/20 border border-[#00e676] text-[#a7f3d0] cursor-default'
-                        : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white shadow-md'
-                    }`}
-                  >
-                    {opsecSanitized ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-[#00e676]" />
-                        <span>✓ Metadatos EXIF Sanitizados</span>
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5" />
-                        <span>Sanitizar Metadatos EXIF (Denegar GPS)</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleApplyRotativeEncryption}
-                    disabled={rotativeCrypted}
-                    className={`w-full py-1.5 px-2 text-[11px] font-mono font-bold rounded-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      rotativeCrypted
-                        ? 'bg-[#00e676]/20 border border-[#00e676] text-[#a7f3d0] cursor-default'
-                        : 'bg-[#ff0055] hover:bg-[#dc2626] text-white shadow-md'
-                    }`}
-                  >
-                    {rotativeCrypted ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-[#00e676]" />
-                        <span>✓ Encriptación Rotativa 12H Activa</span>
-                      </>
-                    ) : (
-                      <>
-                        <Key className="w-3.5 h-3.5" />
-                        <span>Aplicar Encriptación Rotativa (Llaves 12H)</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ========================================================================= */}
-          {/* COLUMNA 2: WARDEN MAP (CINCO ANILLOS INTERACTIVOS) (5.5/12)               */}
-          {/* ========================================================================= */}
-          <section className="xl:col-span-6 border-b xl:border-b-0 xl:border-r border-[#1e3a6c] flex flex-col bg-[#090f1e]">
-            <div className="px-4 py-3 bg-[#081021] border-b border-[#1e3a6c] flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#00ffff] flex items-center gap-1.5 uppercase tracking-wider">
-                <Layers className="w-3.5 h-3.5 text-[#00ffff]" />
-                MAPA SISTÉMICO DE LOS CINCO ANILLOS DE WARDEN
-              </span>
-              <span className="font-mono text-[10px] text-[#00e676] font-bold">
-                PROTECCIÓN PIC (INFRAESTRUCTURA CRÍTICA)
-              </span>
-            </div>
-
-            <div className="p-3 sm:p-4 overflow-y-auto space-y-4 flex-1 flex flex-col justify-between">
-              
-              {/* Warden Visual Diagram */}
-              <div className="bg-[#040712] border border-[#1e3a6c] rounded-2xs p-4 flex flex-col items-center shadow-inner relative">
-                <p className="text-[11px] text-[#64748b] text-center max-w-lg mb-2">
-                  Presione &ldquo;Reforzar&rdquo; en la tabla inferior para blindar cada Anillo con contramedidas criptográficas, silos de red (Air-Gap) o redundancia de fibra óptica.
-                </p>
-
-                {/* Concentric Rings Visualization */}
-                <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center my-2 select-none">
-                  {/* Ring 5: Fuerzas Militares */}
-                  <div className={`absolute w-64 h-64 sm:w-72 sm:h-72 rounded-full border-2 border-dashed transition-all flex items-start justify-center pt-1.5 ${
-                    rings[5].defended
-                      ? 'border-[#00e676] bg-[#00e676]/5 shadow-[0_0_15px_rgba(0,230,118,0.15)]'
-                      : 'border-[#1e3a6c] bg-transparent'
-                  }`}>
-                    <span className="font-mono text-[10px] font-bold text-[#64748b] bg-[#040712]/90 px-1.5 rounded-2xs">
-                      A5: Fuerzas ({rings[5].vuln}%)
-                    </span>
-                  </div>
-
-                  {/* Ring 4: Población */}
-                  <div className={`absolute w-52 h-52 sm:w-60 sm:h-60 rounded-full border-2 border-dashed transition-all flex items-start justify-center pt-1.5 ${
-                    rings[4].defended
-                      ? 'border-[#00e676] bg-[#00e676]/5 shadow-[0_0_15px_rgba(0,230,118,0.15)]'
-                      : 'border-[#1e3a6c] bg-transparent'
-                  }`}>
-                    <span className="font-mono text-[10px] font-bold text-[#64748b] bg-[#040712]/90 px-1.5 rounded-2xs">
-                      A4: Población ({rings[4].vuln}%)
-                    </span>
-                  </div>
-
-                  {/* Ring 3: Infraestructura Física */}
-                  <div className={`absolute w-40 h-40 sm:w-48 sm:h-48 rounded-full border-2 border-dashed transition-all flex items-start justify-center pt-1.5 ${
-                    rings[3].defended
-                      ? 'border-[#00e676] bg-[#00e676]/5 shadow-[0_0_15px_rgba(0,230,118,0.15)]'
-                      : rings[3].vuln >= 50
-                      ? 'border-[#f59e0b] bg-[#f59e0b]/5'
-                      : 'border-[#1e3a6c] bg-transparent'
-                  }`}>
-                    <span className="font-mono text-[10px] font-bold text-[#64748b] bg-[#040712]/90 px-1.5 rounded-2xs">
-                      A3: Infraestructura ({rings[3].vuln}%)
-                    </span>
-                  </div>
-
-                  {/* Ring 2: Elementos Esenciales (SCADA) */}
-                  <div className={`absolute w-28 h-28 sm:w-36 sm:h-36 rounded-full border-2 transition-all flex items-start justify-center pt-1 ${
-                    rings[2].defended
-                      ? 'border-[#00e676] bg-[#00e676]/10 shadow-[0_0_20px_rgba(0,230,118,0.2)]'
-                      : rings[2].vuln >= 70
-                      ? 'border-[#ff0055] bg-[#ff0055]/10 animate-pulse shadow-[0_0_15px_rgba(255,0,85,0.4)]'
-                      : 'border-[#1e3a6c]'
-                  }`}>
-                    <span className="font-mono text-[10px] font-bold text-[#fca5a5] bg-[#040712]/90 px-1.5 rounded-2xs">
-                      A2: Esenciales ({rings[2].vuln}%)
-                    </span>
-                  </div>
-
-                  {/* Ring 1: Liderazgo C4ISR (Centro) */}
-                  <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex flex-col items-center justify-center transition-all z-20 ${
-                    rings[1].defended
-                      ? 'border-[#00e676] bg-[#00e676]/20 shadow-[0_0_25px_rgba(0,230,118,0.4)]'
-                      : rings[1].vuln >= 60
-                      ? 'border-[#ff0055] bg-[#ff0055]/20 animate-pulse'
-                      : 'border-[#00ffff] bg-[#0f172a]'
-                  }`}>
-                    <Cpu className={`w-4 h-4 sm:w-5 sm:h-5 ${rings[1].defended ? 'text-[#00e676]' : 'text-[#00ffff]'}`} />
-                    <span className="font-mono text-[9px] font-bold text-white tracking-tighter mt-0.5">
-                      A1: C4ISR
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Warden Control Panel Cards */}
-              <div className="space-y-2">
-                {[1, 2, 3, 4, 5].map((id) => {
-                  const r = rings[id];
-                  return (
+                  <div className="space-y-2.5">
+                    {/* COA 1 */}
                     <div
-                      key={id}
-                      className={`p-2.5 sm:p-3 rounded-2xs border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all ${
-                        r.defended
-                          ? 'bg-[#081a14] border-[#00e676]/40'
-                          : r.vuln >= 70
-                          ? 'bg-[#180914] border-[#ff0055]/40'
-                          : 'bg-[#111e3f] border-[#1e3a6c]'
+                      onClick={() => handleSelectCOA(1)}
+                      className={`p-3 rounded-md border cursor-pointer transition-all ${
+                        selectedCOA === 1
+                          ? 'border-[#ff0055] bg-[#ff0055]/10'
+                          : 'border-[#162a56] bg-white/[0.02] hover:border-[#00ffff] hover:bg-[#00ffff]/5'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className={`w-7 h-7 rounded-2xs flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
-                          r.defended
-                            ? 'bg-[#00e676]/20 text-[#00e676] border border-[#00e676]'
-                            : 'bg-[#1e3a6c]/40 text-[#64748b] border border-[#1e3a6c]'
-                        }`}>
-                          A{id}
-                        </span>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-mono text-xs font-bold text-white">
-                              {r.name}
-                            </h4>
-                            <span className="text-[10px] text-[#64748b] font-mono hidden md:inline">
-                              • {r.category}
-                            </span>
-                          </div>
-                          <div className="text-[11px] font-mono flex items-center gap-2 pt-0.5">
-                            <span className={r.defended ? 'text-[#00e676] font-bold' : r.vuln >= 70 ? 'text-[#fca5a5] font-bold' : 'text-[#cbd5e1]'}>
-                              Vulnerabilidad: {r.defended ? 'Protegido' : 'Riesgo'} ({r.vuln}%)
-                            </span>
-                            {r.defended && (
-                              <span className="text-[10px] text-[#a7f3d0]">
-                                (Medida: {r.defenseType})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDefendRing(id)}
-                        disabled={r.defended}
-                        className={`px-3 py-1.5 rounded-2xs text-xs font-mono font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                          r.defended
-                            ? 'bg-[#00e676]/20 border border-[#00e676] text-[#00e676] cursor-default'
-                            : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white shadow-md'
-                        }`}
-                      >
-                        {r.defended ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-[#00e676]" />
-                            <span>Blindado</span>
-                          </>
-                        ) : (
-                          <>
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>{r.defenseType}</span>
-                          </>
-                        )}
-                      </button>
+                      <strong className="text-xs text-white block">
+                        COA 1: Movilización inmediata de blindados en el eje vial central y difusión de desmentidos públicos abiertos.
+                      </strong>
+                      <p className="text-[11px] text-[#94a3b8] mt-1">
+                        Elevada firma electromagnética táctica; alta exposición a interceptación y vulnerabilidad de coordenadas GPS.
+                      </p>
                     </div>
-                  );
-                })}
+
+                    {/* COA 2 (Recommended) */}
+                    <div
+                      onClick={() => handleSelectCOA(2)}
+                      className={`p-3 rounded-md border cursor-pointer transition-all ${
+                        selectedCOA === 2
+                          ? 'border-[#00e676] bg-[#00e676]/10'
+                          : 'border-[#162a56] bg-white/[0.02] hover:border-[#00ffff] hover:bg-[#00ffff]/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <strong className="text-xs text-white block">
+                          COA 2: Implementación de encriptación rotativa (llaves de 12H), control estricto de emisiones EMCON y contramedidas radioeléctricas pasivas.
+                        </strong>
+                        {selectedCOA === 2 && <Check className="w-4 h-4 text-[#00e676] shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-[#94a3b8] mt-1">
+                        Eleva la resiliencia en redes tácticas militares y deniega indicios de geolocalización al oponente asimétrico.
+                      </p>
+                    </div>
+
+                    {/* COA 3 */}
+                    <div
+                      onClick={() => handleSelectCOA(3)}
+                      className={`p-3 rounded-md border cursor-pointer transition-all ${
+                        selectedCOA === 3
+                          ? 'border-[#ff0055] bg-[#ff0055]/10'
+                          : 'border-[#162a56] bg-white/[0.02] hover:border-[#00ffff] hover:bg-[#00ffff]/5'
+                      }`}
+                    >
+                      <strong className="text-xs text-white block">
+                        COA 3: Desconexión total de radioenlaces tácticos en el Comando Fronterizo de manera permanente.
+                      </strong>
+                      <p className="text-[11px] text-[#94a3b8] mt-1">
+                        Provoca parálisis operativa autoinfligida por falta de comunicaciones C4ISR.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#091228] border border-[#162a56] rounded-md p-3.5">
+                  <div className="font-mono text-xs text-[#00ffff] mb-1 font-bold">
+                    ESTADO DE LA RECOMENDACIÓN ESTRATÉGICA:
+                  </div>
+                  {selectedCOA === null && (
+                    <p className="text-xs font-semibold text-slate-400">
+                      Seleccione un Curso de Acción para el Escalón Superior.
+                    </p>
+                  )}
+                  {selectedCOA === 2 && (
+                    <p className="text-xs font-bold text-[#00e676]">
+                      COA 2 Seleccionado: Recomendación aprobada (+25 XP Saber). El control estricto EMCON y encriptación rotativa conserva el Poder Militar frente al barrido hostil.
+                    </p>
+                  )}
+                  {selectedCOA !== null && selectedCOA !== 2 && (
+                    <p className="text-xs font-bold text-[#ff0055]">
+                      COA Crítico: Altamente vulnerable al fuego de contrabatería electromagnética del adversario.
+                    </p>
+                  )}
+                </div>
               </div>
 
+              {/* Sidebar */}
+              <div>
+                <div className="bg-[#ff0055]/10 border border-[#ff0055] p-3 rounded-md text-center mb-4">
+                  <div className="text-[11px] font-mono text-slate-300 mb-1 flex items-center justify-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#ff0055]" />
+                    TIEMPO LÍMITE DE ASESORAMIENTO:
+                  </div>
+                  <div className="font-mono text-2xl font-bold text-[#ff0055]">
+                    {formatTime(w1Timer)}
+                  </div>
+                </div>
+
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-2 pb-1 border-b border-[#162a56]">
+                    PODER MILITAR COMPONENTE
+                  </div>
+                  <p className="text-xs text-[#cbd5e1] leading-relaxed">
+                    El Poder Militar, como parte del Poder Nacional, es concebido y aplicado para la conservación de la soberanía nacional y la integridad territorial. Las operaciones tácticas exigen resiliencia e inteligencia oportuna frente a agresiones híbridas.
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
+        )}
 
-          {/* ========================================================================= */}
-          {/* COLUMNA 3: RADAR DE VULNERABILIDAD DIGITAL & ADAPTATIVE CHATBOT (3.3/12)   */}
-          {/* ========================================================================= */}
-          <section className="xl:col-span-3 border-b xl:border-b-0 flex flex-col bg-[#0b1329]">
-            <div className="px-4 py-3 bg-[#081021] border-b border-[#1e3a6c] flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[#00ffff] flex items-center gap-1.5 uppercase tracking-wider">
-                <Activity className="w-3.5 h-3.5 text-[#00ffff]" />
-                RADAR DIGITAL & RED TEAM
-              </span>
-              <span className="font-mono text-[10px] text-[#00e676] font-bold">
-                MONITOR ACTIVO
-              </span>
-            </div>
-
-            <div className="p-3 sm:p-4 overflow-y-auto space-y-3.5 flex-1 flex flex-col">
-              
-              {/* Radar de Riesgo de Infraestructura */}
-              <div className="bg-[#111e3f] border border-[#1e3a6c] rounded-2xs p-3 space-y-2.5 shadow-md">
-                <div className="flex items-center justify-between text-[11px] font-mono font-bold text-white uppercase border-b border-[#1e3a6c] pb-1.5">
-                  <span>ÍNDICES DE RIESGO PIC</span>
-                  <span className="text-[10px] text-[#00ffff]">METRIC LOG</span>
-                </div>
-
-                {/* Exposición OPSEC */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-[#64748b]">Fuga OPSEC / Exposición de Datos</span>
-                    <span className={`font-bold ${metrics.opsecExposition >= 50 ? 'text-[#ff0055]' : 'text-[#00e676]'}`}>
-                      {metrics.opsecExposition >= 50 ? 'Crítica' : 'Baja'} ({metrics.opsecExposition}%)
-                    </span>
+        {/* WINDOW 2: SEGURIDAD DE OPERACIONES (OPSEC) */}
+        {activeTab === 1 && (
+          <section className="p-4 sm:p-6 min-h-[560px] animate-fadeIn">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              <div>
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-4 mb-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 pb-1.5 border-b border-[#162a56]">
+                    PROCEDIMIENTOS DE MEDIDAS OPSEC
                   </div>
-                  <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
+                  <p className="text-xs text-[#94a3b8] mb-3">
+                    Estructure secuencialmente las directrices obligatorias de contrainteligencia de acuerdo con el protocolo boliviano de seguridad de transmisiones.
+                  </p>
+
+                  <div className="space-y-2.5">
+                    {/* Item A */}
                     <div
-                      className={`h-full transition-all duration-500 ${
-                        metrics.opsecExposition >= 50 ? 'bg-[#ff0055]' : 'bg-[#00e676]'
+                      onClick={() => handleToggleOpsecOrder('A. Sanitización de metadatos GPS (EXIF) en imágenes GEOINT.')}
+                      className={`p-3 rounded-md border cursor-pointer transition-all ${
+                        opsecInput.includes('A. Sanitización de metadatos GPS (EXIF) en imágenes GEOINT.')
+                          ? 'border-[#00e676] bg-[#00e676]/10'
+                          : 'border-[#162a56] bg-white/[0.02] hover:border-[#00ffff] hover:bg-[#00ffff]/5'
                       }`}
-                      style={{ width: `${metrics.opsecExposition}%` }}
-                    />
-                  </div>
-                </div>
+                    >
+                      <b className="text-xs text-[#00ffff]">Procedimiento A:</b>{' '}
+                      <span className="text-xs text-slate-200">
+                        Sanitizar y eliminar metadatos lógicos GPS (EXIF) en imágenes satelitales GEOINT.
+                      </span>
+                    </div>
 
-                {/* Vulnerabilidad SCADA */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-[#64748b]">Vulnerabilidad SCADA (Energía)</span>
-                    <span className={`font-bold ${metrics.scadaVuln >= 50 ? 'text-[#ff0055]' : 'text-[#00e676]'}`}>
-                      {metrics.scadaVuln >= 50 ? 'Crítica' : 'Baja'} ({metrics.scadaVuln}%)
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
+                    {/* Item B */}
                     <div
-                      className={`h-full transition-all duration-500 ${
-                        metrics.scadaVuln >= 50 ? 'bg-[#ff0055]' : 'bg-[#00e676]'
+                      onClick={() => handleToggleOpsecOrder('B. Aplicar silencio EMCON radioeléctrico en el Comando Táctico.')}
+                      className={`p-3 rounded-md border cursor-pointer transition-all ${
+                        opsecInput.includes('B. Aplicar silencio EMCON radioeléctrico en el Comando Táctico.')
+                          ? 'border-[#00e676] bg-[#00e676]/10'
+                          : 'border-[#162a56] bg-white/[0.02] hover:border-[#00ffff] hover:bg-[#00ffff]/5'
                       }`}
-                      style={{ width: `${metrics.scadaVuln}%` }}
-                    />
-                  </div>
-                </div>
+                    >
+                      <b className="text-xs text-[#00ffff]">Procedimiento B:</b>{' '}
+                      <span className="text-xs text-slate-200">
+                        Iniciar estricto Control de Emisiones (EMCON) para neutralizar barridos de triangulación hostiles.
+                      </span>
+                    </div>
 
-                {/* Resiliencia Tecnológica */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-[#64748b]">Índice de Resiliencia Tecnológica</span>
-                    <span className={`font-bold ${metrics.resilience >= 80 ? 'text-[#00e676]' : 'text-[#f59e0b]'}`}>
-                      {metrics.resilience >= 80 ? 'Excelente' : 'Insuficiente'} ({metrics.resilience}%)
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
+                    {/* Item C */}
                     <div
-                      className={`h-full transition-all duration-500 ${
-                        metrics.resilience >= 80 ? 'bg-[#00e676]' : 'bg-[#f59e0b]'
+                      onClick={() => handleToggleOpsecOrder('C. Ejecutar salto de frecuencias cifrado cada 12 horas.')}
+                      className={`p-3 rounded-md border cursor-pointer transition-all ${
+                        opsecInput.includes('C. Ejecutar salto de frecuencias cifrado cada 12 horas.')
+                          ? 'border-[#00e676] bg-[#00e676]/10'
+                          : 'border-[#162a56] bg-white/[0.02] hover:border-[#00ffff] hover:bg-[#00ffff]/5'
                       }`}
-                      style={{ width: `${metrics.resilience}%` }}
-                    />
+                    >
+                      <b className="text-xs text-[#00ffff]">Procedimiento C:</b>{' '}
+                      <span className="text-xs text-slate-200">
+                        Forzar salto cíclico de frecuencias y rotación criptográfica simétrica.
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {earnedXp > 0 && (
-                  <div className="pt-2 border-t border-[#1e3a6c] flex items-center justify-between text-[10px] font-mono text-[#00e676]">
-                    <span>DOMINIO CIBERDEFENSA:</span>
-                    <span className="font-bold px-2 py-0.5 bg-[#00e676]/20 border border-[#00e676] rounded-2xs">
-                      +{earnedXp} XP ACREDITADOS
-                    </span>
+                <div className="bg-[#091228] border border-[#162a56] rounded-md p-4">
+                  <div className="font-mono text-xs text-[#00ffff] mb-1 font-bold">
+                    PROTOCOLO OPSEC ESTABLECIDO:
                   </div>
-                )}
+                  {opsecInput.length === 0 ? (
+                    <p className="text-xs italic text-slate-400">
+                      Establezca la prioridad de los procedimientos tácticos haciendo clic en ellos.
+                    </p>
+                  ) : (
+                    <div className="text-xs space-y-1 my-2">
+                      <strong className="text-[#38bdf8] block">Secuencia seleccionada:</strong>
+                      {opsecInput.map((step, idx) => (
+                        <div key={idx} className="text-slate-300 font-mono text-[11px]">
+                          {idx + 1}. {step}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {opsecFeedback.type !== 'idle' && (
+                    <div
+                      className={`p-2 rounded mt-2 text-xs font-bold ${
+                        opsecFeedback.type === 'success'
+                          ? 'bg-[#00e676]/15 text-[#00e676] border border-[#00e676]/40'
+                          : 'bg-[#ff0055]/15 text-[#ff0055] border border-[#ff0055]/40'
+                      }`}
+                    >
+                      {opsecFeedback.msg}
+                    </div>
+                  )}
+
+                  {opsecInput.length > 0 && !opsecValidated && (
+                    <button
+                      onClick={handleValidateOpsec}
+                      className="mt-3 bg-[#00e676] hover:bg-[#059669] text-black font-mono text-xs font-bold px-4 py-2 rounded transition-colors"
+                    >
+                      Validar Medidas OPSEC (+25 XP)
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Chatbot Adaptativo LISA & Red Team */}
-              <div className="bg-[#040813] border border-[#1e3a6c] rounded-2xs flex-1 flex flex-col overflow-hidden min-h-[340px]">
-                <div className="px-3 py-2 bg-[#0b1329] border-b border-[#1e3a6c] flex items-center justify-between text-xs font-mono">
-                  <span className="text-white font-bold flex items-center gap-1.5">
-                    <Bot className="w-3.5 h-3.5 text-[#00ffff]" />
-                    TUTOR ADAPTATIVO LISA
-                  </span>
-                  <span className="text-[10px] text-[#64748b]">SOCRÁTICO TÁCTICO</span>
+              {/* Sidebar */}
+              <div>
+                <div className="bg-[#ff0055]/10 border border-[#ff0055] p-3 rounded-md text-center mb-4">
+                  <div className="text-[11px] font-mono text-slate-300 mb-1 flex items-center justify-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#ff0055]" />
+                    TIEMPO DE IMPLEMENTACIÓN:
+                  </div>
+                  <div className="font-mono text-2xl font-bold text-[#ff0055]">
+                    {formatTime(w2Timer)}
+                  </div>
                 </div>
 
-                {/* Message Log */}
-                <div className="flex-1 p-3 overflow-y-auto space-y-2.5 text-xs">
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-2 pb-1 border-b border-[#162a56]">
+                    MEDIDAS DE CONTRA-ESPIONAJE
+                  </div>
+                  <p className="text-xs text-[#94a3b8] leading-relaxed">
+                    Las medidas de contrainteligencia táctica, de acuerdo con la doctrina de la Escuela de Comando y Estado Mayor, protegen la confidencialidad de la fuerza y neutralizan las capacidades SIGINT/IMINT del oponente en el teatro de operaciones.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* WINDOW 3: METODOLOGÍA DE ANÁLISIS DE LA AMENAZA (ECEME) */}
+        {activeTab === 2 && (
+          <section className="p-4 sm:p-6 min-h-[560px] animate-fadeIn">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              <div>
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-4 mb-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-3 pb-1.5 border-b border-[#162a56]">
+                    LIENZO OPERATIVO EM-MI-AA-02: ANÁLISIS DE LA AMENAZA
+                  </div>
+                  <p className="text-xs text-[#94a3b8] mb-3">
+                    Sustituya los modelos convencionales y estructure la matriz oficial de la ECEME para evaluar las vulnerabilidades, riesgos y predicciones frente a ataques no tradicionales.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-3">
+                    {/* Bloque 1: Amenaza */}
+                    <div
+                      className={`bg-[#091228] border rounded-md p-3.5 min-h-[160px] flex flex-col justify-between relative transition-all ${
+                        ecemeValidated ? 'border-[#00e676] bg-[#00e676]/5' : 'border-[#162a56]'
+                      }`}
+                    >
+                      <span className="absolute top-2.5 right-3 font-mono text-xs text-[#64748b]">01</span>
+                      <div>
+                        <strong className="text-xs text-[#00ffff] block mb-1">La Amenaza Híbrida</strong>
+                        <span className="text-[11px] text-[#94a3b8] block leading-tight">
+                          Definición de Actores, Intenciones y Capacidades
+                        </span>
+                      </div>
+                      <select
+                        value={ecemeSel1}
+                        onChange={(e) => handleEvaluateEcemeMatrix(e.target.value, ecemeSel2, ecemeSel3, ecemeSel4)}
+                        className="bg-[#030611] border border-[#162a56] text-white p-2 rounded w-full text-xs cursor-pointer mt-2.5 focus:border-[#00ffff] focus:outline-hidden"
+                      >
+                        <option value="none">-- Seleccionar --</option>
+                        <option value="scada">Sabotaje SCADA a Energía / Espionaje SIGINT</option>
+                        <option value="fuerzas">Incursión de Infantería Pesada</option>
+                      </select>
+                    </div>
+
+                    {/* Bloque 2: Vulnerabilidades */}
+                    <div
+                      className={`bg-[#091228] border rounded-md p-3.5 min-h-[160px] flex flex-col justify-between relative transition-all ${
+                        ecemeValidated ? 'border-[#00e676] bg-[#00e676]/5' : 'border-[#162a56]'
+                      }`}
+                    >
+                      <span className="absolute top-2.5 right-3 font-mono text-xs text-[#64748b]">02</span>
+                      <div>
+                        <strong className="text-xs text-[#f59e0b] block mb-1">Vulnerabilidad y Riesgo</strong>
+                        <span className="text-[11px] text-[#94a3b8] block leading-tight">
+                          Debilidades en el Estado y Sistemas del País
+                        </span>
+                      </div>
+                      <select
+                        value={ecemeSel2}
+                        onChange={(e) => handleEvaluateEcemeMatrix(ecemeSel1, e.target.value, ecemeSel3, ecemeSel4)}
+                        className="bg-[#030611] border border-[#162a56] text-white p-2 rounded w-full text-xs cursor-pointer mt-2.5 focus:border-[#f59e0b] focus:outline-hidden"
+                      >
+                        <option value="none">-- Seleccionar --</option>
+                        <option value="abandono">Falta de protección en SCADA / Enlaces desguarnecidos</option>
+                        <option value="moral">Baja moral en reclutamiento convencional</option>
+                      </select>
+                    </div>
+
+                    {/* Bloque 3: Tendencias */}
+                    <div
+                      className={`bg-[#091228] border rounded-md p-3.5 min-h-[160px] flex flex-col justify-between relative transition-all ${
+                        ecemeValidated ? 'border-[#00e676] bg-[#00e676]/5' : 'border-[#162a56]'
+                      }`}
+                    >
+                      <span className="absolute top-2.5 right-3 font-mono text-xs text-[#64748b]">03</span>
+                      <div>
+                        <strong className="text-xs text-[#c084fc] block mb-1">Tendencias en Bolivia</strong>
+                        <span className="text-[11px] text-[#94a3b8] block leading-tight">
+                          Dirección del cambio en el Estado Plurinacional
+                        </span>
+                      </div>
+                      <select
+                        value={ecemeSel3}
+                        onChange={(e) => handleEvaluateEcemeMatrix(ecemeSel1, ecemeSel2, e.target.value, ecemeSel4)}
+                        className="bg-[#030611] border border-[#162a56] text-white p-2 rounded w-full text-xs cursor-pointer mt-2.5 focus:border-[#c084fc] focus:outline-hidden"
+                      >
+                        <option value="none">-- Seleccionar --</option>
+                        <option value="digital">Incremento sostenido de agresiones en infraestructura clave</option>
+                        <option value="conv">Equilibrio armamentístico regional de artillería</option>
+                      </select>
+                    </div>
+
+                    {/* Bloque 4: Predicción */}
+                    <div
+                      className={`bg-[#091228] border rounded-md p-3.5 min-h-[160px] flex flex-col justify-between relative transition-all ${
+                        ecemeValidated ? 'border-[#00e676] bg-[#00e676]/5' : 'border-[#162a56]'
+                      }`}
+                    >
+                      <span className="absolute top-2.5 right-3 font-mono text-xs text-[#64748b]">04</span>
+                      <div>
+                        <strong className="text-xs text-[#ff0055] block mb-1">Predicción Táctica</strong>
+                        <span className="text-[11px] text-[#94a3b8] block leading-tight">
+                          Impacto proyectado a mediano/corto plazo
+                        </span>
+                      </div>
+                      <select
+                        value={ecemeSel4}
+                        onChange={(e) => handleEvaluateEcemeMatrix(ecemeSel1, ecemeSel2, ecemeSel3, e.target.value)}
+                        className="bg-[#030611] border border-[#162a56] text-white p-2 rounded w-full text-xs cursor-pointer mt-2.5 focus:border-[#ff0055] focus:outline-hidden"
+                      >
+                        <option value="none">-- Seleccionar --</option>
+                        <option value="paralisis">Parálisis estratégica si no se aíslan las redes (Air-Gap)</option>
+                        <option value="asimetria">Derrota táctica convencional en el frente</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#091228] border border-[#162a56] rounded-md p-4">
+                  <div className="font-mono text-xs text-[#00ffff] mb-1 font-bold">
+                    VERIFICACIÓN DOCTRINARIA DE LA MATRIZ DE AMENAZA:
+                  </div>
+                  {ecemeValidated ? (
+                    <p className="text-xs font-bold text-[#00e676] leading-relaxed">
+                      <strong>Modelo EM-MI-AA-02 Validado (+25 XP Saber):</strong> Su modelado de la amenaza híbrida identifica correctamente las intenciones y capacidades del oponente frente a nuestras vulnerabilidades lógicas.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">
+                      Configure los 4 parámetros caracterizadores del modelo EM-MI-AA-02 de la ECEME para validar la doctrina.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div>
+                <div className="bg-[#ff0055]/10 border border-[#ff0055] p-3 rounded-md text-center mb-4">
+                  <div className="text-[11px] font-mono text-slate-300 mb-1 flex items-center justify-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#ff0055]" />
+                    TIEMPO DE MODELADO DE AMENAZAS:
+                  </div>
+                  <div className="font-mono text-2xl font-bold text-[#ff0055]">
+                    {formatTime(w3Timer)}
+                  </div>
+                </div>
+
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-4">
+                  <div className="text-sm font-bold text-[#00ffff] font-mono mb-2 pb-1 border-b border-[#162a56]">
+                    MÉTODO EM-MI-AA-02
+                  </div>
+                  <p className="text-xs text-[#94a3b8] leading-relaxed">
+                    El análisis sistemático de la amenaza de la Escuela de Comando y Estado Mayor desglosa el problema asimétrico correlacionando los <strong>Actores, Intenciones y Capacidades</strong> con las <strong>Vulnerabilidades y Riesgos</strong> estructurales del Estado, formulando predicciones de estricto rigor metodológico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* WINDOW 4: RESILIENCIA & EVALUACIÓN SUMATIVA */}
+        {activeTab === 3 && (
+          <section className="p-4 sm:p-6 min-h-[560px] animate-fadeIn">
+            <div className="mb-4">
+              <h2 className="text-base font-bold text-white">Resiliencia ante Amenazas No Tradicionales y Certificación Final</h2>
+              <p className="text-xs text-[#94a3b8]">
+                Defienda sus decisiones analíticas basadas en el Poder Militar y la metodología oficial de la ECEME frente al Red Team.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+              {/* Chat Interface */}
+              <div className="flex flex-col h-[460px] bg-[#02040b] border border-[#162a56] rounded-md overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-2.5">
                   {chatMessages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`p-2.5 rounded-2xs leading-relaxed max-w-[88%] text-[11px] font-sans ${
-                        msg.sender === 'user'
-                          ? 'bg-[#1d3557] text-white ml-auto border border-[#3b82f6]/40'
-                          : msg.sender === 'redteam'
-                          ? 'bg-[#ff0055]/15 text-[#fca5a5] border-l-3 border-[#ff0055]'
-                          : msg.sender === 'system'
-                          ? 'bg-[#111e3f] text-[#a7f3d0] border-l-3 border-[#00e676]'
-                          : 'bg-[#13223f] text-[#cbd5e1] border-l-3 border-[#00ffff]'
+                      className={`p-2.5 px-3 rounded-md text-xs leading-relaxed max-w-[85%] ${
+                        msg.type === 'ai'
+                          ? 'bg-[#0f1c3a] border-l-4 border-[#00ffff] self-start text-slate-200'
+                          : msg.type === 'red'
+                          ? 'bg-[#ff0055]/15 border-l-4 border-[#ff0055] self-start text-[#ff4d6d]'
+                          : 'bg-[#1c335e] self-end text-white'
                       }`}
                     >
-                      <div className="flex items-center justify-between font-mono text-[9.5px] mb-1 opacity-80">
-                        <strong className="tracking-wider">{msg.author}</strong>
-                        <span>{msg.timestamp}</span>
-                      </div>
-                      <p>{msg.text}</p>
+                      <strong className="font-bold block text-[11px] mb-0.5 opacity-90">{msg.author}:</strong>
+                      <span>{msg.text}</span>
                     </div>
                   ))}
-                  <div ref={chatBottomRef} />
+                  <div ref={chatEndRef} />
                 </div>
 
-                {/* Input Bar */}
-                <form
-                  onSubmit={handleSendAnalystMessage}
-                  className="p-2 bg-[#0b1329] border-t border-[#1e3a6c] flex items-center gap-2"
-                >
+                <div className="flex p-2 bg-[#050a17] border-t border-[#162a56] gap-2">
                   <input
                     type="text"
-                    value={analystInput}
-                    onChange={(e) => setAnalystInput(e.target.value)}
-                    placeholder="Justifique o consulte sobre Warden o SCADA..."
-                    className="flex-1 bg-[#030611] border border-[#1e3a6c] rounded-2xs px-3 py-1.5 text-xs text-white placeholder-[#64748b] focus:outline-none focus:border-[#00ffff] font-sans"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                    placeholder="Escriba su curso de acción (ej. Air-Gap, sanitización EXIF, EMCON)..."
+                    className="flex-1 bg-[#02040b] border border-[#162a56] rounded px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-[#00ffff]"
                   />
                   <button
-                    type="submit"
-                    className="px-3 py-1.5 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-mono text-xs font-bold rounded-2xs transition-colors cursor-pointer flex items-center gap-1 shadow-md shrink-0"
+                    onClick={handleSendChat}
+                    className="bg-[#3b82f6] hover:bg-[#2563eb] text-white font-mono text-xs font-bold px-4 py-2 rounded flex items-center gap-1.5 transition-colors"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Enviar</span>
                   </button>
-                </form>
+                </div>
               </div>
 
-            </div>
-          </section>
+              {/* Radar and Scorecard generation */}
+              <div>
+                <div className="bg-[#0c152b] border border-[#162a56] rounded-md p-3.5 mb-4">
+                  <div className="text-xs font-bold text-white mb-2.5 font-mono">
+                    INDICADORES COGNITIVOS DE AMENAZA
+                  </div>
 
+                  {/* SCADA metric */}
+                  <div className="mb-2.5">
+                    <div className="flex justify-between text-[11px] text-[#94a3b8] mb-1 font-mono">
+                      <span>Riesgo en Infraestructura (SCADA)</span>
+                      <span className={scadaRisk <= 15 ? 'text-[#00e676]' : 'text-[#ff0055]'}>
+                        {scadaRisk <= 15 ? 'Mitigado (10%)' : 'Crítica (90%)'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[#0b1122] rounded overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${scadaRisk <= 15 ? 'bg-[#00e676]' : 'bg-[#ff0055]'}`}
+                        style={{ width: `${scadaRisk}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* OPSEC metric */}
+                  <div className="mb-2.5">
+                    <div className="flex justify-between text-[11px] text-[#94a3b8] mb-1 font-mono">
+                      <span>Exposición de Datos (OPSEC)</span>
+                      <span className={opsecRisk <= 20 ? 'text-[#00e676]' : 'text-[#ff0055]'}>
+                        {opsecRisk <= 20 ? 'Baja (15%)' : 'Alta (80%)'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[#0b1122] rounded overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${opsecRisk <= 20 ? 'bg-[#00e676]' : 'bg-[#ff0055]'}`}
+                        style={{ width: `${opsecRisk}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Resilience metric */}
+                  <div className="mb-2">
+                    <div className="flex justify-between text-[11px] text-[#94a3b8] mb-1 font-mono">
+                      <span>Coeficiente de Resiliencia Táctica</span>
+                      <span className={resilienceScore >= 80 ? 'text-[#00e676]' : 'text-[#00ffff]'}>
+                        {resilienceScore >= 80 ? 'Excelente (100%)' : `${resilienceScore}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[#0b1122] rounded overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${resilienceScore >= 80 ? 'bg-[#00e676]' : 'bg-[#00ffff]'}`}
+                        style={{ width: `${resilienceScore}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Button to Generate Scorecard */}
+                {isFinalCertified && (
+                  <button
+                    onClick={() => setShowScorecard(true)}
+                    className="w-full bg-[#00e676] hover:bg-[#059669] text-black font-mono font-bold text-xs p-3.5 rounded flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,230,118,0.3)] animate-bounce"
+                  >
+                    <Award className="w-4 h-4" />
+                    <span>🎖️ Generar Boleta de Calificación CVIE</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Pre-print Scorecard Viewer */}
+            {showScorecard && (
+              <div className="mt-5 border border-[#00e676] bg-[#060f24] rounded-md p-4 animate-fadeIn">
+                <div className="flex justify-between items-center border-b border-[#162a56] pb-2 mb-3">
+                  <h3 className="text-xs font-bold text-white font-mono flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[#00e676]" />
+                    PREVISUALIZACIÓN DE BOLETA DE CAPACITACIÓN ACADÉMICA
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={triggerPrint}
+                      className="bg-[#3b82f6] hover:bg-[#2563eb] text-white font-mono text-xs px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>🖨️ Imprimir Boleta Táctica</span>
+                    </button>
+                    {onEnterModule && (
+                      <button
+                        onClick={onEnterModule}
+                        className="bg-[#00e676] hover:bg-[#059669] text-black font-mono text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+                      >
+                        <span>Avanzar a Fase IV</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scorecard Card */}
+                <div className="p-5 bg-white text-black rounded max-w-xl mx-auto font-sans shadow-lg">
+                  <div className="text-center mb-3 border-b-2 border-black pb-2">
+                    <h4 className="text-sm font-bold tracking-wide">ESCUELA DE COMANDO Y ESTADO MAYOR DEL EJÉRCITO</h4>
+                    <h5 className="text-xs font-medium text-slate-700">Mcal. Andrés de Santa Cruz</h5>
+                    <span className="text-[11px] font-mono text-slate-600 block mt-0.5 font-bold">
+                      CVIE - FASE III: RESILIENCIA TECNOLÓGICA
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3 text-slate-800">
+                    <div><b>OFICIAL:</b> MY. DEM. EXAMINADO GENERAL</div>
+                    <div><b>FECHA:</b> {currentDate}</div>
+                    <div><b>NÚCLEO:</b> Gestión de Riesgo y Ciberdefensa</div>
+                    <div><b>RESILIENCIA FINAL:</b> <span className="font-bold text-green-700">{globalXP}%</span></div>
+                  </div>
+
+                  <table className="w-full border-collapse text-xs mb-3">
+                    <thead>
+                      <tr className="bg-slate-200 border border-black">
+                        <th className="p-2 border border-black text-left">Eje Temático Acreditado</th>
+                        <th className="p-2 border border-black text-center">Puntaje (XP)</th>
+                        <th className="p-2 border border-black text-center">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border border-black">
+                        <td className="p-2 border border-black">
+                          <b>SABER:</b> Ciberinteligencia & OSINT Estratégico (Doctrina ECEME)
+                        </td>
+                        <td className="p-2 border border-black text-center font-mono">{saberXP} / 50</td>
+                        <td className="p-2 border border-black text-center font-bold text-green-700">
+                          {saberXP >= 35 ? 'ACREDITADO' : 'PENDIENTE'}
+                        </td>
+                      </tr>
+                      <tr className="border border-black">
+                        <td className="p-2 border border-black">
+                          <b>HACER:</b> Análisis de la Amenaza & Procedimientos OPSEC
+                        </td>
+                        <td className="p-2 border border-black text-center font-mono">{hacerXP} / 50</td>
+                        <td className="p-2 border border-black text-center font-bold text-green-700">
+                          {hacerXP >= 35 ? 'ACREDITADO' : 'PENDIENTE'}
+                        </td>
+                      </tr>
+                      <tr className="bg-slate-100 border border-black font-bold">
+                        <td className="p-2 border border-black text-right">NOTA TOTAL INTEGRAL:</td>
+                        <td className="p-2 border border-black text-center font-mono">{globalXP} / 100</td>
+                        <td className="p-2 border border-black text-center text-green-700">
+                          {globalXP >= 75 ? 'CERTIFICACIÓN APROBADA' : 'REPROBADO'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div className="text-[10px] border-t border-dashed border-black pt-2 text-center italic text-slate-600">
+                    "Seguridad, Resiliencia y Defensa del Territorio Nacional" // Firma Digital CVIE
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+      </div>
+
+      {/* HIDDEN DOCUMENT PRINT TEMPLATE (Activated via window.print()) */}
+      <div id="scorecard-print-area" className="hidden">
+        <div className="text-center mb-5 border-b-2 border-black pb-3">
+          <h2 className="text-xl font-bold">ESTADO PLURINACIONAL DE BOLIVIA</h2>
+          <h3 className="text-lg font-semibold">ESCUELA DE COMANDO Y ESTADO MAYOR DEL EJÉRCITO</h3>
+          <h4 className="text-base italic">"Mcal. Andrés de Santa Cruz"</h4>
+          <p className="font-mono text-xs mt-1">SISTEMA VIRTUAL DE ADIESTRAMIENTO DE INTELIGENCIA DE ESTADO MAYOR (CVIE)</p>
+        </div>
+
+        <div className="mb-5 text-sm leading-relaxed">
+          <p><b>OFICIAL EVALUADO:</b> MY. DEM. EXAMINADO GENERAL</p>
+          <p><b>EVALUACIÓN:</b> FASE III: RESILIENCIA TECNOLÓGICA Y GESTIÓN DE RIESGO (ECEME)</p>
+          <p><b>FECHA DE EMISIÓN:</b> {currentDate}</p>
+          <p><b>COEFICIENTE DE RESILIENCIA TÁCTICA:</b> {globalXP}%</p>
+        </div>
+
+        <table className="w-full border-collapse my-4 text-sm">
+          <thead>
+            <tr className="bg-slate-100 border border-black">
+              <th className="border border-black p-2 text-left">Eje Evaluativo de Competencias</th>
+              <th className="border border-black p-2 text-left">Metodología Utilizada</th>
+              <th className="border border-black p-2 text-center">Desempeño / Puntos (XP)</th>
+              <th className="border border-black p-2 text-center">Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border border-black">
+              <td className="border border-black p-2"><b>Dimensión del Saber (Ciberinteligencia & OSINT)</b></td>
+              <td className="border border-black p-2">Análisis de Amenazas No Tradicionales y del Poder Militar</td>
+              <td className="border border-black p-2 text-center font-mono">{saberXP} / 50 XP</td>
+              <td className="border border-black p-2 text-center font-bold">
+                {saberXP >= 35 ? 'APROBADO' : 'NO ACREDITADO'}
+              </td>
+            </tr>
+            <tr className="border border-black">
+              <td className="border border-black p-2"><b>Dimensión del Hacer (Medidas OPSEC & Ciberdefensa)</b></td>
+              <td className="border border-black p-2">Metodología ECEME EM-MI-AA-02 y Aislamiento SCADA</td>
+              <td className="border border-black p-2 text-center font-mono">{hacerXP} / 50 XP</td>
+              <td className="border border-black p-2 text-center font-bold">
+                {hacerXP >= 35 ? 'APROBADO' : 'NO ACREDITADO'}
+              </td>
+            </tr>
+            <tr className="border border-black font-bold bg-slate-100">
+              <td colSpan={2} className="border border-black p-2 text-right">CALIFICACIÓN FINAL INTEGRADA:</td>
+              <td className="border border-black p-2 text-center font-mono">{globalXP} / 100 XP</td>
+              <td className="border border-black p-2 text-center text-green-800">
+                {globalXP >= 75 ? 'CERTIFICACIÓN OTORGADA' : 'NO CERTIFICADO'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="mt-14 flex justify-around text-center text-sm">
+          <div>
+            <div className="border-t border-black w-48 mx-auto pt-1 font-semibold">Firma del Analista Evaluado</div>
+            <span className="text-xs text-slate-600">MY. DEM. EXAMINADO GENERAL</span>
+          </div>
+          <div>
+            <div className="border-t border-black w-48 mx-auto pt-1 font-semibold">Director de Evaluación CVIE</div>
+            <span className="text-xs text-slate-600">Escuela de Comando y Estado Mayor</span>
+          </div>
         </div>
       </div>
     </div>
